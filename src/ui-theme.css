@@ -1,0 +1,255 @@
+/* Shared desktop palette and compact management layout. */
+:root {
+  --panel: #17232E;
+  --text: #E8EDF2;
+  --muted: #A6B9C8;
+  --border: #354B5C;
+  --green: #66CBB5;
+  --blue: #66CBB5;
+  --gold: #DDB565;
+  --red: #D87570;
+  color: var(--text);
+}
+button, input, select { color: var(--text); }
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--green); outline-offset: 3px;
+}
+.panel, #play-ui .panel, #play-ui .resource-bar, .topbar, dialog {
+  background: var(--panel); border-color: var(--border); backdrop-filter: none;
+}
+.panel { box-shadow: 0 10px 30px #050e1833; border-radius: 10px; }
+.primary-button, .primary-command { background: var(--green); color: #102A29; }
+.primary-button:hover, .primary-command:hover { background: #7DD8C4; }
+.secondary-button, .square-button, .diplomacy-button {
+  background: #1C2E3C; color: var(--text); border: 1px solid #496579; border-radius: 7px;
+}
+.secondary-button:hover, .square-button:hover, .diplomacy-button:hover { background: #294353; border-color: var(--green); }
+.cost, .resource > .icon { color: var(--gold); }
+.resource small, .health-track > span { color: var(--green); }
+select, input[type="search"] { background: #1C2E3C; border-color: #496579; color: var(--text); }
+.section-label, .eyebrow, .territory-note, .foreign-doctrine { color: var(--muted); }
+.peace-button { color: var(--green); background: #21463F; border-color: #66CBB588; }
+.war-button { color: var(--red); background: #38292E; border-color: #D8757099; }
+.relation-label { color: var(--green); }
+.relation-label.war, .peace-status.at-war { color: var(--red); }
+.friendly-dot { background: var(--green); }
+.hostile-dot { background: var(--red); }
+
+/* One top strip leaves more of the map visible. World/help stay in the footer. */
+body:has(#play-ui:not([hidden])) .topbar { width: 228px; height: 68px; padding: 0 20px; }
+body:has(#play-ui:not([hidden])) .topbar nav,
+body:has(#play-ui:not([hidden])) .topbar .session,
+body:has(#play-ui:not([hidden])) .brand small { display: none; }
+body:has(#play-ui:not([hidden])) .brand { font-size: 21px; white-space: nowrap; }
+body:has(#play-ui:not([hidden])) .brand-mark { width: 36px; height: 36px; }
+.resource-bar { top: 0; left: 228px; height: 68px; padding: 0 18px; gap: 18px; }
+.nation-title { min-width: 140px; border-left: 1px solid var(--border); padding-left: 18px; }
+.nation-title strong { font-size: 16px; color: var(--text); }
+.nation-title small { color: var(--muted); }
+.nation-flag { width: 44px; height: 29px; }
+.resource { position: relative; display: flex; align-items: center; gap: 7px; padding: 17px 0 0 16px; min-width: 100px; border-left: 1px solid var(--border); }
+.resource-label { position: absolute; top: 0; left: 43px; color: var(--muted); font-size: 10px; }
+.resource strong { color: var(--text); font-size: 16px; }
+.resource small { font-size: 10px; }
+.resource-bar .peace-status { margin-left: auto; padding: 5px 8px; font-size: 10px; }
+.resource-bar .diplomacy-button { white-space: nowrap; min-height: 38px; padding: 8px 12px; }
+#operation-time { margin-left: 0; font-size: 12px; }
+#pause-button { width: 38px; height: 38px; flex-shrink: 0; }
+.play-footer .text-button { padding: 3px 6px; font-size: 11px; color: var(--muted); }
+.play-footer .text-button .icon { margin-right: 4px; }
+
+/* Management tabs keep economy and recruitment from competing for space. */
+.command-panel { top: 84px; left: 18px; width: 308px; padding: 16px; max-height: calc(100dvh - 150px); }
+.command-panel .panel-heading { display: none; }
+.management-tabs { display: flex; margin: -16px -16px 16px; border-bottom: 1px solid var(--border); }
+.management-tabs button { flex: 1; min-height: 48px; border-bottom: 3px solid transparent; background: transparent; color: var(--muted); font-weight: 650; font-size: 13px; }
+.management-tabs button .icon { margin-right: 8px; }
+.management-tabs button.active { color: var(--text); border-bottom-color: var(--green); background: #66CBB509; }
+.management-tabs button.active .icon { color: var(--green); }
+.recruit-heading { font-size: 15px; margin: 0 0 12px; }
+.training-label { display: none; }
+#army-controls { display: flex; flex-direction: column; }
+#army-controls .production-summary { order: 2; margin: 4px 0 14px; color: var(--muted); font-size: 10px; }
+#army-controls .recruit-heading { order: 0; }
+#army-controls .action-button { order: 1; }
+#army-controls .force-capacity { order: 3; }
+#army-controls > .section-label:not(.training-label) { order: 4; }
+#army-controls .training-queue { order: 5; }
+#army-controls .doctrine-control { order: 6; }
+#army-controls .action-button, #economy-controls .action-button {
+  margin: 0 0 9px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: #1B2C39;
+}
+.action-button strong { font-size: 13px; color: var(--text); }
+.action-button small { color: var(--muted); font-size: 10px; }
+#army-controls .action-button > .icon { width: 30px; height: 30px; color: #BED0DC; }
+#army-controls .action-button:hover { border-color: var(--green); background: #223C47; }
+#army-controls .action-button > .cost { font-size: 13px; text-align: right; white-space: nowrap; }
+.force-capacity { padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+.force-capacity > span { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+.force-capacity .icon { color: var(--gold); }
+.force-capacity strong { margin-left: auto; }
+#capacity-warning { display: flex; gap: 10px; margin-top: 12px; padding: 10px; border: 1px solid #DDB56577; background: #DDB5650C; border-radius: 6px; color: var(--gold); }
+#capacity-warning span { flex: 1; }
+#capacity-warning strong { font-size: 11px; display: block; }
+#capacity-warning small { display: block; margin-top: 4px; font-size: 10px; line-height: 1.4; }
+.training-queue { margin: 8px 0 18px; }
+.training-queue > span:only-child { display: block; border: 1px dashed #496579; border-radius: 7px; padding: 17px 10px; text-align: center; color: var(--muted); }
+.doctrine-control { border-top: 1px solid var(--border); padding-top: 14px; }
+.doctrine-control select { width: 100%; }
+.doctrine-control p { color: var(--muted); line-height: 1.5; }
+.tactical-panel { width: 246px; right: 18px; bottom: 76px; padding: 14px; }
+.tactical-panel > .secondary-button { display: none; }
+.map-legend { gap: 14px; }
+.selected-panel { bottom: 54px; left: calc(50% + 100px); min-width: 0; width: max-content; max-width: calc(100vw - 360px); padding: 11px; gap: 8px; }
+.selected-copy { min-width: 130px; max-width: 190px; }
+.selected-copy strong { font-size: 11px; }
+.selected-copy span { font-size: 10px; line-height: 1.4; }
+.selected-symbol { width: 30px; }
+.selected-panel .secondary-button { min-height: 38px; white-space: nowrap; padding: 8px 10px; }
+.selected-panel .primary-command { background: var(--green); color: #102A29; border-color: var(--green); }
+#embark-button, #land-button { flex-direction: row; gap: 6px; font-size: 11px; }
+#embark-button::after, #land-button::after { content: none; }
+#event-feed { bottom: 325px; right: 18px; }
+#paused-banner { top: 84px; }
+.leaders-panel { top: 84px; }
+
+/* Wide diplomacy window: searchable nations beside the selected nation's facts. */
+.diplomacy-panel { position: fixed; top: 16px; bottom: 16px; left: 50%; right: auto; transform: translateX(-50%); width: min(1220px, calc(100vw - 40px)); padding: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr); grid-template-rows: 104px minmax(0, 1fr); overflow: hidden; }
+.diplomacy-header { grid-column: 1 / -1; border-bottom: 1px solid var(--border); padding: 18px 24px 0; }
+.diplomacy-header h2 { display: flex; align-items: center; gap: 14px; font-size: 27px; }
+.diplomacy-header h2 > .icon { width: 28px; height: 28px; color: var(--green); }
+.diplomacy-header h2 small { color: var(--muted); font: 400 13px "DM Sans", sans-serif; margin-left: 8px; }
+.diplomacy-header .icon-button { color: var(--muted); }
+.diplomacy-header .diplomacy-tabs { width: 400px; margin: 8px auto 0; gap: 3px; }
+.diplomacy-tabs button { color: var(--muted); border-color: var(--border); background: #182936; }
+.diplomacy-tabs button.active { color: var(--green); background: #223D48; border-color: #496579; border-bottom: 3px solid var(--green); }
+.diplomacy-sidebar { min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 18px 16px; border-right: 1px solid var(--border); }
+.diplomacy-sidebar input, .diplomacy-sidebar select { width: 100%; min-height: 42px; flex-shrink: 0; }
+.nation-list { min-height: 0; margin: 0; padding: 0 3px 0 0; flex: 1; }
+.diplomacy-nation { background: #192A37; border: 1px solid var(--border); padding: 12px; min-height: 68px; gap: 12px; margin-bottom: 7px; }
+.diplomacy-nation.selected { border-color: var(--green); background: #66CBB50D; box-shadow: inset 0 0 0 1px #66CBB522; }
+.diplomacy-nation strong { font-size: 13px; color: var(--text); font-weight: 650; }
+.diplomacy-nation small { font-size: 11px; color: var(--muted); }
+.country-flag { width: 42px; height: 29px; object-fit: cover; border-radius: 4px; box-shadow: 0 2px 6px #0003; flex-shrink: 0; }
+.diplomacy-nation > .relation-label { font-size: 10px; }
+.nation-details { min-height: 0; overflow-y: auto; border: 0; padding: 16px; scrollbar-width: thin; scrollbar-color: #496579 transparent; }
+#nation-details { max-height: none; height: 100%; }
+.detail-card { background: #1A2A37; border: 1px solid var(--border); border-radius: 8px; margin: 0 0 10px; padding: 16px; }
+.nation-detail-heading { min-height: 86px; }
+.selected-nation { display: flex; gap: 18px; align-items: center; }
+.selected-nation .country-flag { width: 62px; height: 44px; }
+.selected-nation h3 { color: var(--text); font-size: 25px; margin: 0 0 5px; }
+.selected-nation small { color: var(--muted); font-size: 12px; }
+.nation-detail-heading > .relation-label { padding: 8px 12px; border: 1px solid currentColor; border-radius: 8px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+.nation-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 0 0 10px; }
+.nation-metrics > div + div { border-left: 1px solid var(--border); padding-left: 16px; }
+.nation-metrics small { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.nation-metrics small .icon { width: 16px; height: 16px; }
+.nation-metrics strong { color: var(--gold); font-size: 23px; margin-top: 9px; font-weight: 650; }
+#foreign-army-note { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; }
+.nation-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.nation-facts > div { display: flex; gap: 12px; align-items: center; }
+.nation-facts .icon { color: #A6B9C8; }
+.nation-facts small { color: var(--muted); font-size: 11px; display: block; }
+.nation-facts strong { font-size: 15px; display: block; margin-top: 4px; font-weight: 600; }
+.foreign-doctrine { font-size: 12px; color: var(--text); line-height: 1.6; }
+.intelligence-actions { padding: 16px; }
+.intelligence-actions h4 { margin: 0; display: flex; gap: 12px; align-items: center; font-size: 13px; }
+.intelligence-actions h4 .icon { color: var(--muted); }
+#intel-status { font-size: 11px; color: var(--muted); line-height: 1.5; margin: 10px 0 14px; }
+.intel-buttons { display: flex; gap: 10px; }
+.intel-buttons .secondary-button { flex: 1; min-height: 44px; padding: 9px; gap: 7px; font-size: 11px; }
+.intel-buttons .cost { margin-left: auto; }
+#counter-button { width: auto; }
+.diplomacy-explainer { padding: 0; }
+.diplomacy-explainer summary { list-style: none; display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 13px 16px; font-size: 12px; color: var(--text); }
+.diplomacy-explainer summary::-webkit-details-marker { display: none; }
+.diplomacy-explainer summary > .icon:last-child { margin-left: auto; width: 14px; transform: rotate(90deg); }
+.diplomacy-explainer[open] summary > .icon:last-child { transform: rotate(-90deg); }
+.diplomacy-explainer p { margin: 0; padding: 0 16px 15px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.diplomacy-actions { position: sticky; bottom: -16px; background: var(--panel); padding: 16px 0 8px; margin-top: 18px; border-top: 1px solid var(--border); justify-content: flex-end; gap: 10px; }
+.diplomacy-actions > button { flex: 0 1 auto; display: flex; align-items: center; gap: 8px; padding: 11px 16px; min-height: 42px; border-radius: 7px; white-space: nowrap; }
+#rankings-panel { grid-column: 1 / -1; min-height: 0; padding: 22px; }
+#ranking-table th { background: var(--panel); }
+#ranking-table table { font-size: 13px; }
+#ranking-table td { padding: 15px 6px; }
+body:has(#diplomacy-panel:not([hidden])) .topbar { visibility: hidden; }
+
+/* Civilian industry and shared world market. Controls survive inventory refreshes. */
+.industry-panel { position:fixed; z-index:9; top:84px; right:18px; bottom:76px; width:min(1020px,calc(100vw - 360px)); padding:0; display:flex; flex-direction:column; pointer-events:auto; overflow:hidden; }
+.industry-header { padding:18px 22px 0; border-bottom:1px solid var(--border); }
+.industry-header .diplomacy-tabs { max-width:420px; margin-top:15px; }
+.industry-header .icon-button { color:var(--muted); }
+.industry-body { display:grid; grid-template-columns:220px minmax(0,1fr); min-height:0; flex:1; }
+.stockpile-panel { padding:18px; overflow:auto; border-right:1px solid var(--border); }
+.industry-panel h3 { font-size:14px; margin:0 0 12px; }
+.economy-muted { font-size:11px; color:var(--muted); line-height:1.6; margin:0 0 16px; }
+.stockpile-grid { display:flex; flex-direction:column; gap:0; margin-bottom:20px; }
+.commodity-stock { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px 0; border-bottom:1px solid #354B5C88; font-size:12px; }
+.commodity-stock > span { display:flex; gap:8px; align-items:center; }
+.commodity-stock i,.commodity-dot { display:inline-block; width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+.commodity-stock strong { color:var(--gold); font-variant-numeric:tabular-nums; }
+.domestic-toggle { display:flex; gap:8px; align-items:flex-start; font-size:11px; color:var(--text); line-height:1.5; margin-bottom:12px; }
+.domestic-toggle input { accent-color:var(--green); margin:2px 0 0; }
+.economy-workspace { min-height:0; overflow:auto; padding:20px; scrollbar-width:thin; }
+.workspace-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.workspace-heading h3 { margin:0; }
+.workspace-heading > button { font-size:11px; }
+#factory-count { color:var(--green); margin-left:8px; }
+#factory-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:24px; }
+.factory-card { border:1px solid var(--border); border-radius:8px; padding:14px; background:#1A2A37; }
+.factory-card strong { font-size:12px; }
+.factory-card .text-button { font-size:10px; color:var(--green); }
+.factory-card select { width:100%; min-height:34px; padding:7px 10px; font-size:12px; }
+.factory-card p { font-size:10px; color:var(--muted); line-height:1.6; min-height:34px; }
+.factory-card small { font-size:10px; color:var(--gold); }
+.factory-card .workspace-heading:last-child { margin:0; }
+.factory-card .workspace-heading .secondary-button { padding:5px 9px; min-height:28px; font-size:10px; }
+.factory-progress { height:4px; background:#0E1923; border-radius:4px; margin:12px 0; overflow:hidden; }
+.factory-progress span { display:block; background:var(--green); height:100%; width:0; }
+.economy-empty { grid-column:1/-1; padding:24px; border:1px dashed var(--border); border-radius:8px; color:var(--muted); font-size:12px; line-height:1.6; }
+.deposit-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.deposit-list > div { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid var(--border); border-radius:7px; padding:10px; font-size:12px; }
+.deposit-list .commodity-dot { margin-right:6px; }
+.deposit-list small { display:block; color:var(--muted); margin:5px 0 0 14px; font-size:10px; }
+.deposit-list button { font-size:10px; min-height:30px; padding:5px 8px; }
+.trade-toolbar { display:flex; gap:16px; align-items:flex-end; margin-bottom:14px; }
+.trade-toolbar label { display:flex; flex-direction:column; gap:8px; color:var(--muted); font-size:11px; }
+.trade-toolbar label:first-child { flex:1; }
+.trade-toolbar select,.trade-toolbar input { min-height:38px; padding:8px 10px; font-size:12px; border:1px solid #496579; border-radius:6px; background:#1C2E3C; }
+#trade-quantity { width:95px; }
+.trade-table-wrap { overflow-x:auto; margin-bottom:15px; }
+.trade-table { border-collapse:collapse; width:100%; font-size:11px; white-space:nowrap; }
+.trade-table th { font-size:10px; text-align:left; font-weight:500; color:var(--muted); padding:10px 6px; border-bottom:1px solid var(--border); }
+.trade-table td { padding:9px 6px; border-bottom:1px solid #354B5C88; font-variant-numeric:tabular-nums; }
+.trade-table .commodity-dot { margin-right:7px; }
+.trade-table .secondary-button { min-height:30px; font-size:10px; padding:6px 9px; width:100%; }
+.trade-table [data-trade-side="buy"] { color:var(--green); }
+.trade-table [data-trade-side="sell"] { color:var(--gold); }
+.trade-history p { display:flex; justify-content:space-between; gap:14px; color:var(--muted); font-size:11px; line-height:1.5; border-bottom:1px solid #354B5C88; padding:8px 0; margin:0; }
+.trade-history strong { color:var(--gold); white-space:nowrap; }
+body:has(#industry-panel:not([hidden])) .tactical-panel,body:has(#industry-panel:not([hidden])) #event-feed { visibility:hidden; }
+
+/* One second per tick, five ticks per day. The clock is independent of rendering. */
+.resource-bar { gap:14px; }
+.game-clock { display:flex; flex-direction:column; gap:3px; min-width:76px; flex-shrink:0; }
+#game-clock #operation-time { margin:0; color:var(--text); font-size:12px; font-weight:650; }
+#game-tick { font-size:10px; color:var(--muted); }
+#day-progress { height:4px; width:76px; background:#344A59; border-radius:3px; overflow:hidden; }
+#day-progress-fill { display:block; width:0; height:100%; background:var(--green); }
+.game-clock.paused #day-progress-fill { background:var(--gold); }
+.trade-toolbar label { min-width:0; }
+#trade-timing { max-width:160px; }
+.recurring-orders { margin-bottom:20px; }
+.recurring-order { display:flex; align-items:center; gap:12px; border:1px solid var(--border); background:#1A2A37; border-radius:7px; padding:12px; margin-bottom:9px; }
+.recurring-order > div { flex:1; min-width:0; }
+.recurring-order strong { font-size:12px; color:var(--text); }
+.recurring-order small { display:block; font-size:10px; color:var(--muted); line-height:1.6; margin-top:3px; }
+.recurring-order .trade-skipped { color:var(--gold); }
+.recurring-order button { font-size:10px; }
+.recurring-order .text-button { color:var(--red); }
+
+/* Global Conquer branding and unobtrusive beta version. */
+.beta-label { color:var(--muted); font-size:9px; font-weight:400; letter-spacing:0.2px; white-space:nowrap; }
+#save-status .beta-label { margin-left:10px; }
+body:has(#play-ui:not([hidden])) .brand { font-size:16px; gap:8px; letter-spacing:0.3px; }
