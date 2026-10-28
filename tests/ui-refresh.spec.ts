@@ -20,11 +20,11 @@ test("desktop management, diplomacy, faster zoom and camera-synchronous map icon
  await page.goto("/",{waitUntil:"domcontentloaded"});await expect(page.locator("#deploy-button")).toBeEnabled();
  await page.locator("#deploy-button").click();await page.waitForFunction(()=>window.__worldRTS?.mode==="play");
  await expect(page.locator("#nation-flag")).toHaveAttribute("src","/flags/fi.svg");
- await expect(page.locator("#economy-controls")).toBeVisible();await page.locator("#army-tab").click();
+ await page.locator("#economy-tab").click();await expect(page.locator("#economy-controls")).toBeVisible();await page.locator("#army-tab").click();
  await expect(page.locator("#army-controls")).toBeVisible();await expect(page.locator("#economy-controls")).toBeHidden();
  await expect(page.locator('[data-train="infantry"]')).toBeVisible();
- const strip=await page.locator(".resource-bar").boundingBox();expect(strip!.y).toBe(0);expect(strip!.height).toBe(68);
- expect(await page.evaluate(()=>getComputedStyle(document.querySelector(".command-panel")!).backgroundColor)).toBe("rgb(23, 35, 46)");
+ const strip=await page.locator(".resource-bar").boundingBox();expect(strip!.y).toBe(0);expect(strip!.height).toBe(52);
+ expect(await page.evaluate(()=>getComputedStyle(document.querySelector(".command-panel")!).backgroundColor)).toBe("rgb(20, 20, 22)");
  // Record the camera projection used when the labels clear/draw, then compare it
  // to the camera after each rendered frame. This catches frame-order and throttle drift.
  await page.evaluate(()=>{
@@ -49,7 +49,7 @@ test("desktop management, diplomacy, faster zoom and camera-synchronous map icon
  await page.screenshot({path:".cache/ui-refresh-play.png"});
  await page.locator("#diplomacy-button").click();await page.locator("#nation-search").fill("Norway");await page.locator('[data-nation="NOR"]').click();
  await expect(page.locator("#foreign-capital")).toHaveText("Oslo");await expect(page.locator(".selected-nation .country-flag")).toHaveAttribute("src","/flags/no.svg");
- const panel=await page.locator("#diplomacy-panel").boundingBox();expect(panel!.width).toBeGreaterThan(1100);
+ const panel=await page.locator("#diplomacy-panel").boundingBox();expect(panel!.width).toBe(400);
  await expect(page.locator("#alliance-action")).toBeVisible();await expect(page.locator("#war-action")).toBeVisible();
  const intel=await page.locator("#recon-button").boundingBox();const footer=await page.locator(".diplomacy-actions").boundingBox();expect(intel!.y+intel!.height).toBeLessThan(footer!.y);
  await page.screenshot({path:".cache/ui-refresh-diplomacy.png"});

@@ -1,0 +1,161 @@
+/* Reference-inspired monochrome command interface. Geography and map shaders stay unchanged. */
+:root { --panel:#141416; --text:#ECECEE; --muted:#9898A4; --border:#303034; --green:#A5DFBE; --blue:#EEEEF0; --gold:#E0B866; --red:#D87570; background:#0D0D0F; }
+body { font-size:12px; }
+.panel, #play-ui .panel, #play-ui .resource-bar, .topbar, dialog { background:#141416; border-color:#303034; border-radius:0; box-shadow:none; }
+button, select, input, .region-card, .region-thumbnail, .brand-mark, .globe-label, .country-flag, .nation-flag, .detail-card, .factory-card, .recurring-order { border-radius:0!important; }
+h2,h3,.brand { font-family:Impact,'Arial Narrow',sans-serif; font-weight:500; letter-spacing:1px; }
+.eyebrow,.section-label,.resource-label,.game-clock,.region-card small,.session,.play-footer,.map-legend,.command-rail,.relation-label { font-family:'Courier New',monospace; letter-spacing:1px; }
+.primary-button,.primary-command,.selected-panel .primary-command { background:#F4F4F5; color:#101012; border-color:#F4F4F5; }
+.primary-button:hover,.primary-command:hover { background:#DADADD; }
+.secondary-button,.square-button,.diplomacy-button,select,input[type='search'],.trade-toolbar input,.trade-toolbar select { background:#101012; color:#E4E4E8; border:1px solid #36363C; box-shadow:none; }
+.secondary-button:hover,.square-button:hover,.diplomacy-button:hover { background:#252528; border-color:#9999A3; }
+button:focus-visible,select:focus-visible,input:focus-visible { outline-color:#E8E8ED; }
+.brand-rts { color:#A8A8B3; }
+.brand-mark { border:1px solid #CBCBD0; color:#F2F2F4; background:transparent; }
+.topbar { height:56px; padding:0 26px; background:#111113; border-bottom:1px solid #303034; }
+.brand { font-size:20px; }
+.brand small { font-family:Georgia,serif; font-size:8px; font-weight:400; letter-spacing:1px; }
+.nav-button { color:#9C9CAA; }
+.nav-button.active { color:#F4F4F5; border-color:#F4F4F5; }
+.region-sidebar { top:90px; left:30px; width:304px; }
+.region-sidebar h1 { font-family:'DM Sans',sans-serif; font-size:44px; line-height:1.08; letter-spacing:-1.5px; }
+.region-sidebar h1 em { font-style:normal; color:#9999A5; }
+.region-sidebar .intro { font-size:12px; }
+.region-card { background:#141416; border:1px solid #27272C; min-height:55px; padding:10px 12px; }
+.region-card.selected { background:#232326; border-color:#A8A8B0; border-left:3px solid #E8E8EB; }
+.region-thumbnail { background:#101012; width:30px; height:30px; }
+.region-thumbnail img { width:22px; height:22px; }
+.region-card .icon { display:none; }
+.region-copy strong { font-size:12px; }
+.region-list { gap:7px; }
+.briefing-panel { top:88px; right:0; width:334px; padding:24px; border:1px solid #303034; }
+.briefing-map,.map-caption { display:none; }
+.briefing-heading h2 { text-transform:uppercase; font-size:31px; }
+.briefing-heading > .icon { display:none; }
+.briefing-panel .description { font-size:12px; line-height:1.6; }
+.briefing-stats { border-color:#303034; }
+#nation-select { background:#0D0D0F; min-height:44px; border:1px solid #34343B; }
+#deploy-button { min-height:44px; }
+#new-campaign-button { width:100%; justify-content:flex-start; margin-top:8px; min-height:42px; font-size:12px; }
+.globe-label { color:#B0B0BA; background:#18181C; border:1px solid #393940; font-family:Georgia,serif; font-size:10px; }
+.globe-label.focused { background:#F0F0F3; color:#121214; border-color:#F0F0F3; }
+.marker-dot { display:none; }
+.overview-bottom { left:30px; right:30px; border-color:#27272C; font-family:'Courier New',monospace; font-size:8px; }
+
+/* Compact top strip and persistent left navigation. */
+body:has(#play-ui:not([hidden])) .topbar { width:220px; height:52px; padding:0 14px; }
+body:has(#play-ui:not([hidden])) .brand { font-size:17px; gap:9px; letter-spacing:1px; }
+body:has(#play-ui:not([hidden])) .brand-mark { width:30px; height:30px; }
+.resource-bar { left:220px; height:52px; gap:8px; padding:0 10px; }
+.nation-title { min-width:110px; padding:6px 10px; border:1px solid #303034; background:#1C1C20; gap:8px; }
+.nation-title strong { font-size:12px; }
+.nation-title small,.resource > .icon,.resource-bar .peace-status { display:none; }
+.nation-flag { width:24px; height:17px; }
+.resource { min-width:90px; padding:9px 10px; gap:6px; background:#1C1C20; border:1px solid #303034; }
+.resource-label { position:static; font-size:8px; }
+.resource strong { font-family:'Courier New',monospace; font-size:13px; color:var(--gold); }
+.resource small { font-family:'Courier New',monospace; }
+.resource-bar .diplomacy-button { min-height:30px; font-size:10px; padding:6px 8px; }
+#leaders-button { margin-left:auto; }
+#pause-button { width:30px; height:30px; }
+.game-clock { min-width:76px; }
+#day-progress { background:#323238; }
+#day-progress-fill { background:#ECECEF; }
+.command-rail { position:fixed; top:52px; bottom:0; left:0; width:54px; background:#111113; border-right:1px solid #303034; pointer-events:auto; display:flex; flex-direction:column; }
+.command-rail button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; width:100%; height:65px; background:transparent; border-left:2px solid transparent; color:#9595A1; font-size:9px; }
+.command-rail button .icon { width:18px; height:18px; }
+.command-rail button.active { background:#222225; border-left-color:#ECECF0; color:#F4F4F5; }
+.workspace-hidden { display:none!important; }
+.command-panel { top:62px; left:auto; right:12px; bottom:12px; width:400px; max-height:none; padding:16px; border:1px solid #303034; }
+.management-tabs { margin:-16px -16px 18px; }
+.management-tabs button { height:46px; min-height:46px; color:#9999A7; font-family:'Courier New',monospace; font-size:11px; letter-spacing:1px; border-bottom-width:2px; }
+.management-tabs button .icon { display:none; }
+.management-tabs button.active { color:#FFFFFF; background:transparent; border-color:#EEEEF0; }
+.recruit-heading { font-size:21px; text-transform:uppercase; }
+#army-controls .action-button,#economy-controls .action-button { background:#1C1C20; border-color:#303034; padding:12px; min-height:70px; margin-bottom:10px; }
+#army-controls .action-button[data-available='false'] { opacity:.5; }
+#army-controls .action-button > .icon { border:1px solid #414149; padding:6px; width:39px; height:39px; color:#E9E9EF; }
+.action-button strong { font-size:13px; }
+#army-controls .action-button::after { content:'TRAIN'; font:10px 'Courier New',monospace; border:1px solid #9999A2; padding:8px; color:#EEEEF1; }
+#army-controls .action-button[data-available='false']::after { content:'LOCKED'; border-color:#34343B; }
+#army-controls .action-button:hover { background:#27272C; border-color:#9999A7; }
+.action-button small,.action-button .cost small { font-size:10px; }
+.action-button .cost { font:13px 'Courier New',monospace; }
+.health-track,.queue-track,.factory-progress { background:#26262C; }
+.health-track > span,.queue-track > span,.factory-progress > span { background:#F0F0F2; }
+.force-capacity,.doctrine-control { border-color:#303034; }
+.force-capacity > span { font:11px 'Courier New',monospace; letter-spacing:1px; }
+.training-queue > span:only-child { border-color:#36363D; }
+.selected-panel { left:calc(54px + (100vw - 478px)/2); bottom:12px; width:760px; max-width:calc(100vw - 490px); padding:11px; flex-wrap:wrap; gap:7px; background:#111113!important; }
+.selected-copy { min-width:100%; max-width:none; display:flex; justify-content:space-between; align-items:center; }
+.selected-symbol { display:none; }
+.selected-panel .secondary-button { min-height:34px; font-size:11px; }
+.tactical-panel { left:64px; right:auto; bottom:12px; width:194px; padding:9px; background:#111113!important; }
+.tactical-panel #minimap { height:120px; }
+.tactical-panel .map-legend { display:none; }
+#event-feed { left:270px; right:auto; bottom:108px; width:330px; }
+#event-feed > div { background:#111113; border-left-color:#E6C879; font-size:10px; }
+.play-footer { left:64px; right:430px; bottom:0; height:16px; pointer-events:none; }
+.play-footer > p,.play-footer #country-hover { display:none; }
+#save-status { font-size:8px; opacity:.65; }
+.leaders-panel { top:62px; right:12px; bottom:12px; width:400px; }
+.industry-panel { top:62px; right:12px; bottom:12px; }
+
+/* Right-side diplomacy browser, with existing information and actions intact. */
+.diplomacy-panel { top:62px; right:12px; bottom:12px; left:auto; transform:none; width:400px; display:flex; flex-direction:column; }
+.diplomacy-header { padding:14px 14px 0; flex-shrink:0; }
+.diplomacy-header h2 { font-size:21px; text-transform:uppercase; }
+.diplomacy-header h2 > .icon,.diplomacy-header h2 small { display:none; }
+.diplomacy-header .diplomacy-tabs { width:100%; margin:12px 0 0; }
+.diplomacy-tabs button { color:#A5A5B2; background:transparent; border:0; font:10px 'Courier New',monospace; text-transform:uppercase; letter-spacing:1px; }
+.diplomacy-tabs button.active { color:#F5F5F6; background:transparent; border:0; border-bottom:2px solid #EFEFF3; }
+.diplomacy-sidebar { border:0; padding:12px 14px; gap:8px; flex:0 0 235px; }
+.diplomacy-sidebar input,.diplomacy-sidebar select { min-height:30px; font-size:10px; padding:6px 9px; }
+.diplomacy-nation { min-height:38px; margin-bottom:5px; padding:8px; background:#19191C; border:1px solid #303034; }
+.diplomacy-nation.selected { background:#242426; border-color:#77777F; box-shadow:none; }
+.diplomacy-nation .country-flag { width:24px; height:16px; }
+.diplomacy-nation strong { font-size:11px; }
+.diplomacy-nation small { display:none; }
+.diplomacy-nation .relation-label { border:1px solid #335547; padding:4px; font-size:8px; }
+#nation-details { height:auto; max-height:none; min-height:0; flex:1; padding:0 14px 14px; }
+.detail-card { background:transparent; border:1px solid #303034; margin-bottom:9px; padding:10px; }
+.nation-detail-heading { min-height:64px; padding:8px 0; border:0; }
+.selected-nation { gap:12px; }
+.selected-nation .country-flag { width:42px; height:29px; }
+.selected-nation h3 { font-size:23px; text-transform:uppercase; }
+.selected-nation small { font-size:9px; }
+.nation-detail-heading > .relation-label { font-size:8px; padding:5px; }
+.nation-detail-heading > .relation-label .icon { display:none; }
+.nation-metrics { grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.nation-metrics > div+div { padding-left:8px; border-color:#303034; }
+.nation-metrics small { font:8px 'Courier New',monospace; text-transform:uppercase; letter-spacing:.6px; }
+.nation-metrics small .icon { display:none; }
+.nation-metrics strong { font:15px 'Courier New',monospace; }
+#foreign-army-note { font-size:8px; }
+.nation-facts { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.nation-facts .icon { display:none; }
+.nation-facts small { font:8px 'Courier New',monospace; text-transform:uppercase; }
+.nation-facts strong { font-size:11px; }
+.foreign-doctrine,#intel-status { font-size:10px; }
+.intelligence-actions h4 { font:11px 'Courier New',monospace; text-transform:uppercase; }
+.intel-buttons { flex-wrap:wrap; gap:6px; }
+.intel-buttons .secondary-button { min-height:29px; font-size:9px; }
+.intel-buttons .icon { display:none; }
+.diplomacy-explainer summary { padding:10px; font-size:10px; }
+.diplomacy-actions { background:#141416; bottom:-14px; padding:10px 0 0; gap:6px; }
+.diplomacy-actions > button { flex:1; padding:8px 4px; min-height:36px; font-size:10px; }
+.diplomacy-actions .icon { display:none; }
+.peace-button { background:#EFEFF2; color:#141416; border:1px solid #EFEFF2; }
+.war-button { background:#2A1819; color:#D87570; border-color:#74403F; }
+#rankings-panel { min-height:0; overflow:auto; padding:14px; }
+#ranking-table table { font-size:10px; }
+#ranking-table th { background:#141416; }
+body:has(#diplomacy-panel:not([hidden])) .topbar { visibility:visible; }
+body:has(#diplomacy-panel:not([hidden])) .command-panel,body:has(#leaders-panel:not([hidden])) .command-panel { visibility:hidden; }
+body:has(#industry-panel:not([hidden])) .command-panel { visibility:hidden; }
+#game-menu-button { font:10px 'Courier New',monospace; padding:7px; min-height:30px; }
+#game-menu { position:fixed; z-index:15; top:54px; right:12px; width:170px; padding:6px; pointer-events:auto; }
+#game-menu button { display:block; width:100%; padding:11px; background:transparent; color:var(--text); text-align:left; font-size:11px; }
+#game-menu button:hover { background:#303034; }
+h2,h3,.brand { font-family:Impact,'Arial Narrow',sans-serif!important; }
+#nation-flag-overlay { display:none; }

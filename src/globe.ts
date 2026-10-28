@@ -38,7 +38,7 @@ export class GlobeView {
   };
 
   constructor(readonly canvas: HTMLCanvasElement) {
-    this.scene.background = new THREE.Color("#0c1621");
+    this.scene.background = new THREE.Color("#0d0d0f");
     this.camera.position.copy(globePoint(18, 40, 19));
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = true;

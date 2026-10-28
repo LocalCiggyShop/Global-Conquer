@@ -1,6 +1,6 @@
 # Global Conquer
 
-Beta · v0.1.0
+Beta · v0.1.1
 
 A single-player browser RTS prototype built with TypeScript, Vite, and Three.js. Choose a continent on a stationary Earth, then deploy into its detailed flat map.
 
@@ -210,3 +210,9 @@ Unit models now use 50% of their previous scale; building models use 0.32 rather
 Construction, recruitment, one-off trades, factory settings, diplomacy, intelligence and embark/disembark actions queue for the next tick. Orders can be planned while paused; resume to execute them. Costs and legality are checked again on execution, and unsuccessful commands report an error. Saved commands use data records, so a reload preserves pending work.
 
 In **Industry & trade → Global trade**, choose **Once · next tick** or **Every 5 days**. Recurring imports and exports first run 25 ticks after scheduling, then every 25 ticks. Each delivery uses current prices, stock, diplomatic relations, warehouse capacity, and available credits. Orders reserve no funds or goods. Missing stock, insufficient funds, full warehouses, or war skip that delivery; the order tries again at its next five-day interval. The order list shows the next due day/tick and the last result. Pause/resume or cancel any recurring order; resuming starts a fresh five-day interval. Pending trades and recurring settlement results are saved after their complete simulation tick, preventing partial tick saves or duplicate deliveries on reload. No inactive-continent or offline catch-up simulation is introduced.
+
+## Command interface and coastal navigation
+
+The reference-style interface uses monochrome square panels, a left Map/Forces/Economy/Diplomacy/Intel rail, right-hand management panels, and a compact top resource/calendar strip. The Menu button opens World overview and Help. Overview retains the existing globe and continent selection, with a separate Start a new game action for saved campaigns.
+
+Land navigation retains all rasterized land-cell centres instead of removing an extra cell around every coast. This restores Denmark’s narrow/coastal routes without opening water or diagonal corner cuts. Ground recruitment stays on the producing building’s connected landmass. Separate islands still require sea transport. The navigation grid dimensions and map geography are unchanged.

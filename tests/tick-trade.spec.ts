@@ -18,7 +18,7 @@ test("real-time day progress, queued trades, recurring five-day delivery and rel
  await page.goto("/",{waitUntil:"domcontentloaded"});await expect(page.locator("#deploy-button")).toBeEnabled();await page.locator("#deploy-button").click();await page.waitForFunction(()=>window.__worldRTS?.mode==="play");
  await expect(page.locator("#operation-time")).toHaveText("Day 1");await expect(page.locator("#game-tick")).toContainText("/ 5");
  await page.locator("#pause-button").click();const frozen=await page.evaluate(()=>({elapsed:window.__worldRTS.state.elapsed,phase:window.__worldRTS.state.tickPhase}));
- await page.locator("#industry-button").click();await page.locator('[data-economy-view="market"]').click();await page.locator("#trade-quantity").fill("5");
+ await page.locator("#economy-tab").click();await page.locator("#industry-button").click();await page.locator('[data-economy-view="market"]').click();await page.locator("#trade-quantity").fill("5");
  const initial=await page.evaluate(()=>window.__worldRTS.state.nations.FRA.stockpile!.copper);
  await page.locator('[data-trade-good="copper"][data-trade-side="buy"]').click();
  expect(await page.evaluate(()=>window.__worldRTS.state.nations.FRA.stockpile!.copper)).toBe(initial);await expect(page.locator("#pending-trade-note")).toContainText("Resume");
@@ -36,7 +36,7 @@ test("real-time day progress, queued trades, recurring five-day delivery and rel
  const next=await page.evaluate(()=>window.__worldRTS.state.market!.recurring![0].nextTick);expect(next).toBe(due+25);
  await page.reload({waitUntil:"domcontentloaded"});await expect(page.locator("#deploy-button")).toBeEnabled();await page.locator("#deploy-button").click();await page.waitForFunction(()=>window.__worldRTS?.mode==="play");
  expect(await page.evaluate(()=>window.__worldRTS.state.market!.trades.length)).toBe(2);expect(await page.evaluate(()=>window.__worldRTS.state.market!.recurring![0].nextTick)).toBe(next);
- await page.locator("#industry-button").click();await page.locator('[data-economy-view="market"]').click();await page.locator("[data-recurring-toggle]").click();await expect(page.locator("#recurring-orders")).toContainText("Paused");
+ await page.locator("#economy-tab").click();await page.locator("#industry-button").click();await page.locator('[data-economy-view="market"]').click();await page.locator("[data-recurring-toggle]").click();await expect(page.locator("#recurring-orders")).toContainText("Paused");
  await page.locator("[data-recurring-toggle]").click();await expect(page.locator("#recurring-orders")).toContainText("Next:");await page.locator("[data-recurring-cancel]").click();await expect(page.locator(".recurring-order")).toHaveCount(0);
  expect(errors).toEqual([]);console.log(JSON.stringify({ticksPerDay:5,deliveryIntervalTicks:25,measuredDeliveryMilliseconds:elapsedWall}));
 });

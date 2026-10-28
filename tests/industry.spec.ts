@@ -23,7 +23,7 @@ test("small models, live factory production, world/nation trade and saved stockp
  await page.addInitScript(save=>{if(!localStorage.getItem("worldrts.campaigns.v2"))localStorage.setItem("worldrts.campaigns.v2",JSON.stringify({europe:save}));},campaignSnapshot(sim.state));
  await page.goto("/",{waitUntil:"domcontentloaded"});await expect(page.locator("#deploy-button")).toBeEnabled();await page.locator("#deploy-button").click();await page.waitForFunction(()=>window.__worldRTS?.mode==="play");
  expect(await page.evaluate(()=>(window.__worldRTS as any).modelScales)).toEqual({unit:0.5,building:0.32});
- await page.locator("#industry-button").click();await expect(page.locator("#industry-panel")).toBeVisible();await expect(page.locator(".factory-card")).toHaveCount(1);
+ await page.locator("#economy-tab").click();await page.locator("#industry-button").click();await expect(page.locator("#industry-panel")).toBeVisible();await expect(page.locator(".factory-card")).toHaveCount(1);
  const deposits=await page.evaluate(()=>window.__worldRTS.state.nodes.filter(n=>n.nation===window.__worldRTS.state.nation));
  expect(deposits.map(n=>n.mineral)).toEqual(sim.state.nodes.filter(n=>n.nation==="FRA").map(n=>n.mineral));
  await expect(page.locator('#deposit-list [data-deposit-locate="coal"]')).toBeEnabled();
@@ -43,6 +43,6 @@ test("small models, live factory production, world/nation trade and saved stockp
  await page.locator("#industry-close").click();await page.screenshot({path:".cache/scaled-units-buildings.png"});
  await page.reload({waitUntil:"domcontentloaded"});await expect(page.locator("#deploy-button")).toBeEnabled();await page.locator("#deploy-button").click();await page.waitForFunction(()=>window.__worldRTS?.mode==="play");
  expect(await page.evaluate(()=>window.__worldRTS.state.nations.FRA.stockpile!.copper)).toBe(before);
- await page.locator("#industry-button").click();await expect(page.locator(`[data-factory-recipe="${factoryId}"]`)).toHaveValue("consumer");await expect(page.locator("[data-factory-status]")).toHaveText("Paused");
+ await page.locator("#economy-tab").click();await page.locator("#industry-button").click();await expect(page.locator(`[data-factory-recipe="${factoryId}"]`)).toHaveValue("consumer");await expect(page.locator("[data-factory-status]")).toHaveText("Paused");
  expect(await page.evaluate(()=>window.__worldRTS.state.market!.trades.length)).toBe(2);expect(errors).toEqual([]);
 });

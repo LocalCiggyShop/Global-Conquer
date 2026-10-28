@@ -1,10 +1,12 @@
 import {
   blockedGrid,
+  connectedCells,
   cellAt,
   cellPoint,
   footprintCells,
   nationSpawn,
   nearestOpen,
+  pointInPolygon,
   routeCellsClear,
 } from "./navigation";
 import {
@@ -181,6 +183,12 @@ function addUnit(
           ? 1
           : 0,
       );
+  if(!isShip(type)){
+    const origin=nearestOpen(grid,own,...position,14);
+    if(origin<0)return false;
+    const reachable=connectedCells({...grid,walkable:own},origin);own.fill(0);
+    for(const i of reachable)own[i]=1;
+  }
   for (const u of state.units)
     if (u.hp > 0 && !u.embarkedOn && isShip(u.type) === isShip(type)) {
       const i = cellAt(grid, u.x, u.z);
@@ -769,15 +777,19 @@ export class Simulation {
         goal = coast;
       } else {
         if (!mask[index]) {
-          if (isShip(u.type) || this.grid.owners[index] < 0) continue;
-          const nearby=nearestOpen(this.grid,mask,...target,5);
+          if (isShip(u.type)) continue;
+          if(this.grid.owners[index]<0){
+            const land=this.data.countries.find(c=>c.polygons.some(p=>pointInPolygon(...target,p)));
+            if(!land||!militaryAccess(this.state,u.nation,land.id))continue;
+          }
+          const nearby=nearestOpen(this.grid,mask,...target,2);
           if(nearby<0)continue;
           goal=cellPoint(this.grid,nearby);
         }
         delete u.landing;
       }
       const offset: Point = [
-        goal[0] + ((i % 3) - 1) * this.grid.cell,
+        goal[0] + (i===0?0:((i % 3) - 1) * this.grid.cell),
         goal[1] + Math.floor(i / 3) * this.grid.cell,
       ];
       const end = nearestOpen(this.grid, mask, ...offset, 4);

@@ -78,17 +78,10 @@ export function createGrid(data: ContinentData, resolution = 256): Grid {
   };
   data.countries.forEach((c, i) => rasterize(grid, c.polygons, i));
   rasterize(grid, data.lakes, -1);
-  // Require cardinal neighbors to be land, providing clearance at coasts and lakes.
-  for (let row = 1; row < height - 1; row++)
-    for (let col = 1; col < width - 1; col++) {
-      const i = row * width + col;
-      if (
-        [i, i - 1, i + 1, i - width, i + width].every(
-          (n) => grid.owners[n] >= 0,
-        )
-      )
-        grid.walkable[i] = 1;
-    }
+  // Cell centres already come from the land polygons. Eroding every coast by
+  // another cell erased narrow peninsulas such as Jutland at continent scale.
+  // A* still rejects water and prevents diagonal corner cutting.
+  for(let i=0;i<grid.owners.length;i++)grid.walkable[i]=grid.owners[i]>=0?1:0;
   return grid;
 }
 

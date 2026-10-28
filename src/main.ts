@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import "./style.css";
 import "./ui-theme.css";
+import "./command-theme.css";
 import {calendar,TICKS_PER_DAY} from "./game-clock";
 import {EconomyPanel} from "./economy-panel";
 import {commodities} from "./economy";
@@ -80,7 +81,7 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="/" aria-label="Global Conquer home"><span class="brand-mark">${icon("globe")}</span><span>GLOBAL<span class="brand-rts">CONQUER</span><small>A WORLD OF POSSIBILITY</small></span></a>
     <nav aria-label="Main navigation"><button id="world-nav" class="nav-button active" aria-label="World overview">${icon("globe")}<span>World</span></button><button id="help-button" class="nav-button" aria-label="How to play">${icon("info")}<span>How to play</span></button></nav>
-    <div class="session"><span class="status-dot"></span><span>LOCAL SAVE</span><span class="beta-label">Beta · v0.1.0</span></div>
+    <div class="session"><span class="status-dot"></span><span>LOCAL SAVE</span><span class="beta-label">Beta · v0.1.1</span></div>
   </header>
   <main>
     <div id="overview-ui">
@@ -103,13 +104,15 @@ app.innerHTML = `
         <select id="nation-select" aria-label="Starting nation" disabled><option>Loading nations…</option></select>
         <p class="nation-note" id="nation-note">5-second countdown. Then build your nation in peace.</p>
         <button id="deploy-button" class="primary-button" disabled><span>Loading map…</span>${icon("arrow")}</button>
+        <button id="new-campaign-button" class="secondary-button" hidden>Start a new game</button>
         <p class="save-note">${icon("shield")} Progress saved on this device</p>
         <button id="retry-data" class="text-button" hidden>Retry map download</button>
       </aside>
       <div class="overview-bottom"><div>${icon("globe")} <span>ONE PLANET. ENDLESS POSSIBILITIES.</span></div><p>Drag to orbit <span>·</span> Scroll to zoom <span>·</span> Select a continent to begin</p><span class="map-credit">EARTH · NASA / BORDERS · NATURAL EARTH</span></div>
     </div>
     <div id="play-ui" hidden>
-      <div class="resource-bar"><span class="nation-title"><img id="nation-flag" class="nation-flag" alt="National flag"><span><strong id="play-nation"></strong><small id="play-region"></small></span></span><span id="peace-status" class="peace-status">At peace</span><div class="resource" title="Treasury"><span class="resource-label">Treasury</span>${icon("diamond")}<strong id="credits">650</strong><small id="income">+3/s</small></div><div class="resource" title="Supplies"><span class="resource-label">Supply</span>${icon("supply")}<strong id="supplies">160</strong><small id="supply-income">+3/s</small></div><div class="resource" title="Army capacity"><span class="resource-label">Forces</span>${icon("units")}<strong id="army">—</strong></div><button id="leaders-button" class="diplomacy-button" aria-controls="leaders-panel" aria-expanded="false">${icon("shield")}<span>Leaders</span></button><button id="diplomacy-button" class="diplomacy-button" aria-label="Open diplomacy" aria-controls="diplomacy-panel" aria-expanded="false">${icon("flag")}<span>Diplomacy</span></button><button id="pause-button" class="square-button" title="Pause / resume (Space)" aria-label="Pause game">${icon("pause")}</button><div id="game-clock" class="game-clock" title="1 real second = 1 tick · 5 ticks = 1 day"><strong id="operation-time">Day 1</strong><small id="game-tick">Tick 1 / 5</small><div id="day-progress" role="progressbar" aria-label="Day progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span id="day-progress-fill"></span></div></div></div>
+      <nav class="command-rail" aria-label="Game navigation"><button data-workspace="map">${icon("flag")}<span>MAP</span></button><button data-workspace="army">${icon("shield")}<span>FORCES</span></button><button data-workspace="economy">${icon("layers")}<span>ECONOMY</span></button><button data-workspace="diplomacy">${icon("globe")}<span>DIPLO</span></button><button data-workspace="intel">${icon("target")}<span>INTEL</span></button></nav>
+      <div class="resource-bar"><span class="nation-title"><img id="nation-flag" class="nation-flag" alt="National flag"><span><strong id="play-nation"></strong><small id="play-region"></small></span></span><span id="peace-status" class="peace-status">At peace</span><div class="resource" title="Treasury"><span class="resource-label">Treasury</span>${icon("diamond")}<strong id="credits">650</strong><small id="income">+3/s</small></div><div class="resource" title="Supplies"><span class="resource-label">Supply</span>${icon("supply")}<strong id="supplies">160</strong><small id="supply-income">+3/s</small></div><div class="resource" title="Army capacity"><span class="resource-label">Forces</span>${icon("units")}<strong id="army">—</strong></div><button id="leaders-button" class="diplomacy-button" aria-controls="leaders-panel" aria-expanded="false">${icon("shield")}<span>Leaders</span></button><button id="diplomacy-button" class="diplomacy-button" aria-label="Open diplomacy" aria-controls="diplomacy-panel" aria-expanded="false">${icon("flag")}<span>Diplomacy</span></button><button id="pause-button" class="square-button" title="Pause / resume (Space)" aria-label="Pause game">${icon("pause")}</button><div id="game-clock" class="game-clock" title="1 real second = 1 tick · 5 ticks = 1 day"><strong id="operation-time">Day 1</strong><small id="game-tick">Tick 1 / 5</small><div id="day-progress" role="progressbar" aria-label="Day progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span id="day-progress-fill"></span></div></div><button id="game-menu-button" class="secondary-button" aria-expanded="false">Menu</button></div><div id="game-menu" class="panel" hidden><button id="menu-world">World overview</button><button id="menu-help">How to play</button></div>
       <aside class="command-panel panel">
         <div id="nation-flag-overlay" aria-hidden="true"></div><div class="panel-heading"><h2>Your nation</h2><button id="manage-close" class="icon-button" aria-label="Close nation panel">${icon("close")}</button></div>
         <div class="management-tabs" role="tablist" aria-label="Nation management"><button id="economy-tab" role="tab" data-panel-tab="economy" aria-controls="economy-controls" aria-selected="true" class="active">${icon("layers")} Economy</button><button id="army-tab" role="tab" data-panel-tab="army" aria-controls="army-controls" aria-selected="false">${icon("units")} Army</button></div><section id="economy-controls" role="tabpanel" aria-labelledby="economy-tab"><div class="base-status"><span>Headquarters</span><strong id="hq-health">100%</strong><div class="health-track"><span id="hq-health-bar"></span></div></div>
@@ -150,7 +153,7 @@ app.innerHTML = `
       </aside>
       <button id="manage-button" class="secondary-button">${icon("home")} Manage nation</button>
       <div class="selected-panel panel"><div class="selected-symbol">${icon("units")}</div><div class="selected-copy"><strong id="selection-title">Your command awaits</strong><span id="selection-note">Click a squad or drag to select units</span></div><button id="select-all-button" class="secondary-button">Select all <kbd>Q</kbd></button><button id="assign-leader-button" class="secondary-button" title="Assign selected units to a military leader">Leader</button><button id="move-button" class="secondary-button primary-command" title="Move selected units" aria-label="Move selected units">${icon("target")} Move</button><button id="frontline-button" class="secondary-button" title="Assign selected infantry to a land border">Frontline</button><button id="embark-button" class="secondary-button" title="Embark ground troops onto a nearby friendly transport" aria-label="Embark selected troops">${icon("anchor")} Board</button><button id="land-button" class="secondary-button" title="Disembark selected transports onto nearby land" aria-label="Disembark troops">${icon("flag")} Land</button><button id="stop-button" class="square-button" title="Stop selected units (X)" aria-label="Stop selected units">${icon("stop")}</button></div>
-      <div class="play-footer"><span id="save-status">${icon("shield")} Autosave enabled <small class="beta-label">Beta · v0.1.0</small></span><p><button id="return-world-button" class="text-button">${icon("globe")} World</button><button id="play-help-button" class="text-button">${icon("info")} Help</button><span>·</span> Right-click to move <span>·</span> WASD / middle-drag to pan</p><span id="country-hover">OPEN OCEAN</span></div>
+      <div class="play-footer"><span id="save-status">${icon("shield")} Autosave enabled <small class="beta-label">Beta · v0.1.1</small></span><p><button id="return-world-button" class="text-button">${icon("globe")} World</button><button id="play-help-button" class="text-button">${icon("info")} Help</button><span>·</span> Right-click to move <span>·</span> WASD / middle-drag to pan</p><span id="country-hover">OPEN OCEAN</span></div>
       <div id="paused-banner" hidden>Paused <span>Space to resume</span></div>
       <div id="build-banner" hidden></div>
       <div id="event-feed" aria-live="polite"></div>
@@ -232,6 +235,7 @@ function refreshSaved() {
 function updateDeploy() {
   const saved = savedCampaigns()[focusedRegion];
   const continuing = saved?.nation === nationSelect.value;
+  $("#new-campaign-button").hidden=!continuing;
   deployButton.querySelector("span")!.textContent = continuing
     ? "Continue game"
     : "Play continent";
@@ -592,6 +596,7 @@ function updatePlayUI() {
       : type === "armor"
         ? "barracks"
         : "HQ/barracks";
+    button.dataset.available=String(slots>0);
     button.querySelector("small")!.textContent = slots
       ? `${type === "transport" ? "6 troop spaces · " : ""}${slots} ${role}${slots > 1 && role === "dock" ? "s" : ""} · ${seconds} ticks each`
       : isShip(type)&&data?.ports ? "Control an operational real port first" : `Build ${isShip(type) ? "a coastal dock" : type === "armor" ? "a barracks" : "an HQ or barracks"} first`;
@@ -986,6 +991,7 @@ function animate(time: number) {
       runtimeTimings={simulationPeakMs:0,viewPeakMs:0,uiPeakMs:0};
       $("#battle-countdown").hidden = true;
       $("#play-ui").hidden = false;
+      workspace("army");
       saveCampaign(simulation.state);
       updatePlayUI();
       eventMessage(
@@ -1018,6 +1024,20 @@ for (const button of document.querySelectorAll<HTMLButtonElement>(
     void focusRegion(button.dataset.region ?? button.dataset.marker!);
   });
 nationSelect.addEventListener("change", updateDeploy);
+$("#game-menu-button").addEventListener("click",()=>{const menu=$("#game-menu");menu.hidden=!menu.hidden;$("#game-menu-button").setAttribute("aria-expanded",String(!menu.hidden));});
+$("#menu-world").addEventListener("click",()=>{$("#game-menu").hidden=true;returnToOverview();});
+$("#menu-help").addEventListener("click",()=>{$("#game-menu").hidden=true;showHelp();});
+$("#new-campaign-button").addEventListener("click",()=>{void enterPlay(true);});
+function workspace(name:string){
+  if(mode!=="play")return;
+  for(const b of document.querySelectorAll<HTMLElement>("[data-workspace]"))b.classList.toggle("active",b.dataset.workspace===name);
+  const management=name==="army"||name==="economy";
+  $(".command-panel").classList.toggle("workspace-hidden",!management);
+  if(management){closeDiplomacy();closeLeaders();economyPanel.close();$(`#${name}-tab`).click();}
+  else if(name==="map"){closeDiplomacy();closeLeaders();economyPanel.close();}
+  else {if($("#diplomacy-panel").hidden)toggleDiplomacy();if(name==="intel")$("#nation-details").querySelector<HTMLElement>(".intelligence-actions")?.scrollIntoView({block:"nearest"});}
+}
+for(const b of document.querySelectorAll<HTMLButtonElement>("[data-workspace]"))b.addEventListener("click",()=>workspace(b.dataset.workspace!));
 deployButton.addEventListener("click", () => {
   void enterPlay();
 });
