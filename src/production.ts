@@ -16,7 +16,7 @@ export function productionBuildings(
   return state.buildings.filter(
     (b) =>
       b.nation === nation &&
-      b.hp > 0 &&
+      b.hp > 0 && !b.construction &&
       (type
         ? canProduce(b, type)
         : ["hq", "barracks", "dock"].includes(b.type)),

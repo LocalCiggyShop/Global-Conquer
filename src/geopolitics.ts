@@ -1,3 +1,7 @@
+import {techCombat} from "./technology";
+import {formedName} from "./formables";
+import {ideologyOf,stabilityEffect} from "./politics";
+import {combatFunding} from "./relations";
 import {commodities,commodityIds} from "./economy";
 import { doctrines } from "./doctrines";
 import type { Campaign, ContinentData } from "./types";
@@ -7,7 +11,7 @@ const referenceColors: Record<string, string> = {
   FRA: "#566d91",
   DEU: "#59605c",
   GBR: "#aa737d",
-  RUS: "#756b80",
+  RUS: "#a46063",
   ESP: "#c7b37d",
   PRT: "#6b876e",
   ITA: "#587153",
@@ -104,7 +108,7 @@ export function nationColor(id: string, data: ContinentData): string {
   if (referenceColors[id]) return referenceColors[id];
   const existing = palettes.get(data);
   if (existing?.has(id)) return existing.get(id)!;
-  const index = [...id].reduce((n, c) => n * 31 + c.charCodeAt(0), 0);
+  const index = [...id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 0);
   const hue = (index * 137.508 + 18) % 360,
     s = 0.18,
     l = 0.57;
@@ -138,7 +142,7 @@ export function militaryPower(state: Campaign, id: string): number {
       .reduce(
         (s, u) =>
           s +
-          u.hp *
+          u.hp * techCombat(state.nations[id],u.type).attack / techCombat(state.nations[id],u.type).received *
             (u.type === "armor"
               ? 1.4
               : u.type === "frigate"
@@ -149,7 +153,7 @@ export function militaryPower(state: Campaign, id: string): number {
         0,
       ) *
       doctrine.damage) /
-      doctrine.received +
+      doctrine.received * combatFunding(state.nations[id]) * ideologyOf(state.nations[id]).damage * stabilityEffect(state.nations[id]) +
       state.nations[id].reserves * 45,
   );
 }
@@ -172,7 +176,7 @@ export function countryRankings(state: Campaign, data: ContinentData) {
       const military = militaryPower(state, n.id);
       return {
         id: n.id,
-        name: data.countries.find((c) => c.id === n.id)?.name ?? n.id,
+        name: formedName(state,n.id,data.countries.find((c) => c.id === n.id)?.name ?? n.id),
         resources,
         economy,
         military,

@@ -28,7 +28,7 @@ export class BorderIndex {
  private borderCells=new Map<number,{nation:string;point:Point;neighbors:string[]}>();
  private candidates=new Map<string,Candidate[]>();
  constructor(readonly grid:Grid,readonly controllerAt:(i:number)=>string|null){this.owners=new Array(grid.owners.length).fill(null);}
- query(revision:number,nation:string,target?:string,anchor?:Point){
+ private refresh(revision:number){
   if(revision!==this.revision){
    this.revision=revision;const g=this.grid,dirty=new Set<number>();
    for(let i=0;i<g.owners.length;i++){const owner=this.controllerAt(i);if(owner===this.owners[i])continue;this.owners[i]=owner;const x=i%g.width;for(const j of [i,x?i-1:-1,x<g.width-1?i+1:-1,i-g.width,i+g.width])if(j>=0&&j<g.owners.length)dirty.add(j);}
@@ -39,7 +39,10 @@ export class BorderIndex {
    this.candidates.clear();
    for(const c of this.borderCells.values()){const list=this.candidates.get(c.nation)??[];for(const other of c.neighbors)list.push({point:c.point,target:other});this.candidates.set(c.nation,list);}
   }
-  return chooseBorder(this.candidates.get(nation)??[],target,anchor);
+ }
+ neighbors(revision:number,nation:string){this.refresh(revision);return [...new Set((this.candidates.get(nation)??[]).map(c=>c.target))];}
+ query(revision:number,nation:string,target?:string,anchor?:Point){
+  this.refresh(revision);return chooseBorder(this.candidates.get(nation)??[],target,anchor);
  }
 }
 export function borderPositions(grid:Grid,controllerAt:(i:number)=>string|null,nation:string,target?:string,anchor?:Point) {

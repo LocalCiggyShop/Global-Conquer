@@ -6,6 +6,7 @@ import type { Campaign, ContinentData, Grid, Point } from "./types";
 export interface OwnershipChange { previous:string; next:string; cells:readonly number[]; }
 export class Territory {
   controlChanges:OwnershipChange[]=[];
+  private cityStates?:Set<number>;
   private pressure = new Map<number, { nation: string; progress: number }>();
   private timer = 0;
   revision = 0;
@@ -27,6 +28,7 @@ export class Territory {
     readonly changed: () => void,
     prepared?:{states:StrategicState[];membership:Int32Array},
   ) {
+    state.coreStates??={};
     state.occupation ??= {};
     state.seaControl ??= {};
     if (!state.cities) {
@@ -102,21 +104,22 @@ export class Territory {
     this.syncAssets();
   }
   stateAt(index: number): StrategicState | undefined {
-    return index >= 0 ? this.states[this.membership[index]] : undefined;
+    return index >= 0 && this.membership ? this.states[this.membership[index]] : undefined;
   }
   stateController(province: StrategicState): string {
-    return this.state.states![province.id] ?? province.original;
+    return this.state.states![province.id] ?? this.coreNation(province);
   }
+  coreNation(province:StrategicState){return this.state.coreStates?.[province.id]??province.original;}
   private writeState(province: StrategicState, nation: string, since = this.state.elapsed, opponent?: string, settled = false, transferAssets = true) {
     const previous=this.stateController(province);
     if(previous!==nation)this.controlChanges.push({previous,next:nation,cells:province.cells});
-    if (nation === province.original) delete this.state.states![province.id];
+    if (nation === province.original && this.coreNation(province) === province.original) delete this.state.states![province.id];
     else this.state.states![province.id] = nation;
-    const record = { controller: nation, original: province.original, since, ...(opponent ? { opponent } : {}), ...(settled ? { settled: true } : {}) };
-    if (nation === province.original) delete this.state.stateOccupation![province.id];
+    const record = { controller: nation, original: this.coreNation(province), since, ...(opponent ? { opponent } : {}), ...(settled ? { settled: true } : {}) };
+    if (nation === province.original && this.coreNation(province) === province.original) delete this.state.stateOccupation![province.id];
     else this.state.stateOccupation![province.id] = record;
     for (const i of province.cells) {
-      if (nation === province.original) delete this.state.occupation![i];
+      if (nation === province.original && this.coreNation(province) === province.original) delete this.state.occupation![i];
       else this.state.occupation![i] = record;
     }
     if (transferAssets) this.syncAssets(province);
@@ -135,7 +138,7 @@ export class Territory {
   annex(loser: string, victor: string) {
     this.controlChanges=[];
     for (const province of this.states)
-      if (province.original === loser || this.stateController(province) === loser) this.writeState(province, victor, this.state.elapsed, loser, true, false);
+      if (this.stateController(province) === loser || (this.coreNation(province) === loser && this.stateController(province) === victor)) this.writeState(province, victor, this.state.elapsed, loser, true, false);
     this.syncAssets();
     for (const tile of Object.values(this.state.seaControl!))
       if (tile.controller === loser) { tile.controller = victor; tile.settled = true; this.seaRevision++; }
@@ -143,6 +146,37 @@ export class Territory {
     this.landRevision++;
     this.revision++;
     this.changed();
+  }
+  secedeStates(transfers:ReadonlyMap<string,string>){
+    this.controlChanges=[];
+    for(const p of this.states){const nation=transfers.get(p.id);if(!nation)continue;const previous=this.stateController(p);this.state.coreStates![p.id]=nation;this.writeState(p,nation,this.state.elapsed,undefined,true,false);if(previous!==nation)this.controlChanges.push({previous,next:nation,cells:p.cells});delete this.state.resistance?.[p.id];}
+    const capitals=new Set<string>();
+    for(const city of this.state.cities??[]){const child=transfers.get(this.stateAt(cellAt(this.grid,city.x,city.z))?.id??'');if(child){city.nation=child;city.capital=!capitals.has(child);capitals.add(child);}}
+    this.syncAssets();this.pressure.clear();this.landRevision++;this.revision++;this.changed();
+  }
+  coreCountries(countries:readonly string[],nation:string){
+    const required=new Set(countries),capital=this.state.cities?.find(c=>c.nation===nation&&c.capital);this.controlChanges=[];
+    for(const p of this.states)if(required.has(p.original)){
+      const previous=this.stateController(p);this.state.coreStates![p.id]=nation;
+      this.writeState(p,nation,this.state.elapsed,undefined,true,false);
+      delete this.state.resistance?.[p.id];
+      // Core transitions still invalidate derived country fields and route masks.
+      if(previous!==nation)this.controlChanges.push({previous,next:nation,cells:p.cells});
+    }
+    for(const city of this.state.cities??[])if(required.has(city.nation))city.nation=nation;
+    // A unified country keeps the founder's original capital only.
+    for(const city of this.state.cities??[])if(city.nation===nation&&city.capital)city.capital=city===capital;
+    this.syncAssets();this.landRevision++;this.revision++;this.changed();
+  }
+  settlePeace(a:string,b:string,keep:Set<string>){
+    this.controlChanges=[];
+    for(const p of this.states){const occupation=this.state.stateOccupation?.[p.id],owner=this.stateController(p);if(!occupation)continue;
+      const opponent=occupation.opponent??occupation.original;
+      if(!((owner===a&&opponent===b)||(owner===b&&opponent===a)))continue;
+      if(owner===a&&keep.has(p.id)){this.writeState(p,a,this.state.elapsed,b,true,false);(this.state.resistance??={})[p.id]={level:25,since:this.state.elapsed};}
+      else this.writeState(p,opponent,this.state.elapsed,undefined,true,false);
+    }
+    this.syncAssets();this.pressure.clear();this.landRevision++;this.revision++;this.changed();
   }
   controllerAt(index: number): string | null {
     if (
@@ -153,7 +187,7 @@ export class Territory {
       return null;
     return (
       this.state.occupation![index]?.controller ??
-      this.data.countries[this.grid.owners[index]].id
+      (this.stateAt(index)?this.coreNation(this.stateAt(index)!):this.data.countries[this.grid.owners[index]].id)
     );
   }
   ownsFootprint(id: string, indices: number[]) {
@@ -171,7 +205,7 @@ export class Territory {
       this.populations[id] = (this.populations[id] ?? 0) + (this.originalPopulation.get(province.original) ?? 0) * province.cells.length / this.originalCells.get(province.original)!;
     }
     for (const [id, population] of this.originalPopulation)
-      if (!this.originalCells.has(id) && !this.state.nations[id]?.defeated) this.populations[id] = population;
+      if (!this.originalCells.has(id) && !this.state.nations[id]?.defeated && !this.state.nations[id]?.breakaway) this.populations[id] = population;
     for (const city of this.state.cities!) this.incomes[city.controller] = (this.incomes[city.controller] ?? 0) + Math.max(1, Math.min(4, Math.ceil(city.population / 2_000_000)));
   }
   cityIncome(id: string) { this.summarize(); return this.incomes[id] ?? 0; }
@@ -183,6 +217,8 @@ export class Territory {
     const elapsed = this.timer;
     this.timer = 0;
     this.controlChanges=[];
+    this.cityStates??=new Set(this.state.cities!.map(c=>this.membership[cellAt(this.grid,c.x,c.z)]));
+    const eligible=new Set<string>();
     const claims = new Map<number, Set<string>>(),
       ships = new Map<number, Set<string>>();
     for (const u of this.state.units)
@@ -198,6 +234,7 @@ export class Territory {
           if (!this.grid.walkable[center]) continue;
           const province = this.membership[center];
           if (province < 0) continue;
+          if(!u.retreating && (u.organization??100)>=30 && !u.path.length && (u.underFireUntil??0)<=this.state.elapsed && u.hp/u.maxHp>=0.25)eligible.add(province+"|"+u.nation);
           const set = claims.get(province) ?? new Set<string>();
           set.add(u.nation);
           claims.set(province, set);
@@ -211,7 +248,7 @@ export class Territory {
         (n) => n !== current && this.atWar(n, current),
       );
       if (
-        candidates.length !== 1 ||
+        candidates.length !== 1 || !eligible.has(index+"|"+candidates[0]) ||
         [...nations].some((n) => this.atWar(n, candidates[0]))
       ) {
         this.pressure.delete(index);
@@ -220,7 +257,7 @@ export class Territory {
       const nation = candidates[0],
         old = this.pressure.get(index),
         progress = (old?.nation === nation ? old.progress : 0) + elapsed;
-      if (progress < 1) {
+      if (progress < (this.cityStates.has(index)?15:10)) {
         this.pressure.set(index, { nation, progress });
         continue;
       }

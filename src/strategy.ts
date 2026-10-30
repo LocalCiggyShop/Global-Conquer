@@ -1,4 +1,5 @@
-import { allied, militaryAccess } from "./relations";
+import {activeTruce,personalities} from "./strategic-systems";
+import { allied, militaryAccess, relationScore, spending } from "./relations";
 import { militaryPower, isShip } from "./geopolitics";
 import { cellAt } from "./navigation";
 import type { Campaign, Grid } from "./types";
@@ -48,6 +49,9 @@ export function warReadiness(
     enemyPower = b ? militaryPower(state, target) : 0;
   if (!a || !b || actor === target || a.defeated || b.defeated || allied(state, actor, target))
     return { ready: false, reason: "No active opponent", power, enemyPower };
+  const relations=relationScore(state,actor,target),ratio=relations<=-15?1.6:personalities[a.personality??"expansionist"].ratio;
+  if(activeTruce(state,actor,target))return {ready:false,reason:"Peace treaty in force",power,enemyPower};
+  if(relations>=20)return {ready:false,reason:"Good relations favour diplomacy",power,enemyPower};
   if (state.wars.some((w) => w.a === actor || w.b === actor))
     return {
       ready: false,
@@ -58,7 +62,8 @@ export function warReadiness(
   if (
     state.elapsed < 180 ||
     a.industry < 2 ||
-    a.credits < 1200 ||
+    a.credits < (relations<=-15?1200:1800) ||
+    (a.stability??70)<35 ||
     a.supplies < 80
   )
     return {
@@ -73,6 +78,7 @@ export function warReadiness(
     fleet = state.units.filter(
       (u) => u.nation === actor && isShip(u.type) && u.hp > 0,
     );
+  if(a.credits < Math.max(relations<=-15?1200:1800,(ground.length+fleet.length)*0.3*spending(a)*30))return {ready:false,reason:"Insufficient campaign funding",power,enemyPower};
   const start = a.capital ? cellAt(grid, ...a.capital) : -1,
     end = b.capital ? cellAt(grid, ...b.capital) : -1;
   let connected =
@@ -85,7 +91,7 @@ export function warReadiness(
     fleet.some((u) => u.type === "frigate") &&
     ground.length >= 4 &&
     (!coastalOwners || (end >= 0 && coastalOwners.has(grid.owners[end])));
-  if (connected && controllerAt && ground.length >= 4 && power >= Math.max(400, enemyPower * 1.6)) {
+  if (connected && controllerAt && ground.length >= 4 && power >= Math.max(400, enemyPower * ratio)) {
     const visited = new Uint8Array(grid.owners.length), queue = [start];
     visited[start] = 1;
     for (let q = 0; q < queue.length && !visited[end]; q++) {
@@ -106,7 +112,7 @@ export function warReadiness(
       power,
       enemyPower,
     };
-  if (ground.length < 4 || power < Math.max(400, enemyPower * 1.6))
+  if (ground.length < 4 || power < Math.max(400, enemyPower * ratio))
     return {
       ready: false,
       reason: "Insufficient military advantage",

@@ -12,6 +12,7 @@ export interface Country {
 }
 export interface ContinentData {
   id: string;
+  kmPerUnit?: number;
   countries: Country[];
   lakes: Polygon[];
   bounds: [number, number, number, number];
@@ -85,20 +86,37 @@ export interface Unit {
   boarding?: number;
   leaderId?: number;
   orderMode?: "manual" | "frontline" | "ai";
+  stackId?:number;
+  stackSeparated?:boolean;
+  routeFailed?:boolean;
+  organization?: number;
+  retreating?: boolean;
+  tacticalOrder?: "move" | "attackMove" | "hold" | "fallback";
+  waypoints?: Point[];
+  trafficRetryAt?:number;
+  blockedTicks?: number;
+  lastMovedAt?: number;
+  lastCombatAt?: number;
+  lastFiredAt?: number;
+  lastShotTarget?: Point;
   lastAttackerId?: number;
   underFireUntil?: number;
   frontline?: { target: string; anchor: Point; position: Point; objective?: Point; retryAt?: number };
 }
 export interface Building {
+  mineLevel?:number;
+  mineUpgrade?:{remaining:number;total:number};
+  construction?:{completedDays:number;totalDays:number;nextTick:number;missing?:Commodity[]};
   recipe?: FactoryRecipeId;
   progress?: number;
   enabled?: boolean;
   mineral?: Mineral;
+  rally?:Point;
   portId?: string;
   id: number;
   nation: string;
   team: "player" | "enemy";
-  type: "hq" | "barracks" | "mine" | "dock" | "factory";
+  type: "hq" | "barracks" | "mine" | "dock" | "factory" | "depot";
   x: number;
   z: number;
   hp: number;
@@ -126,7 +144,27 @@ export interface RecurringTrade {
 }
 export interface WorldMarket { stock: Stockpile; trades: TradeRecord[]; recurring?:RecurringTrade[]; }
 /** Player intent is saved immediately and applied at the next simulation tick. */
+export type IdeologyId="nonAligned"|"democracy"|"liberalism"|"nationalism"|"fascism"|"socialism"|"communism";
+export interface PeaceTerms { target:string; keepStates:string[]; reparations:number; demilitarize:boolean; }
+export interface Treaty {a:string;b:string;until:number;payer?:string;recipient?:string;payment:number;remaining:number;zones:string[];}
 export type GameCommand =
+ | {kind:"research";branch:import("./technology").TechBranch}
+ | {kind:"upgradeMine";id:number}
+ | {kind:"mergeUnits"|"splitUnits";ids:number[]}
+ | {kind:"fallbackLine";ids:number[];start:Point;end:Point}
+ | {kind:"tactical";ids:number[];target?:Point;mode:"move"|"attackMove"|"hold"|"fallback";append?:boolean}
+ | {kind:"rally";id:number;target:Point}
+ | {kind:"peaceTerms";terms:PeaceTerms}
+ | {kind:"objective";objective:"economy"|"regional"|"formable"}
+ | {kind:"ideology";ideology:IdeologyId}
+ | {kind:"civicPolicy";policy:"none"|"rights"|"welfare"}
+ | {kind:"formNation";id:string}
+ | {kind:"tradePolicy";policy:"free"|"balanced"|"closed"}
+ | {kind:"industryPolicy";policy:"balanced"|"civilian"|"industrial"|"mobilized"}
+ | {kind:"spending";value:number}
+ | {kind:"embassy";target:string}
+ | {kind:"resolveNews";id:number}
+ | {kind:"shares";side:"buy"|"sell";quantity:number}
  | {kind:"build";type:Exclude<Building["type"],"hq">;x:number;z:number}
  | {kind:"train";type:Unit["type"]}
  | {kind:"trade";commodity:Commodity;side:"buy"|"sell";quantity:number;partner:string}
@@ -149,6 +187,24 @@ export interface TrainingOrder {
   producer?: number;
 }
 export interface NationState {
+  technology?:{levels:Partial<Record<import("./technology").TechBranch,number>>;active?:import("./technology").TechBranch;projects:Partial<Record<import("./technology").TechBranch,{progress:number;total:number}>>};
+  instabilitySince?:number;
+  lastUnrestAt?:number;
+  fracturedAt?:number;
+  breakaway?:{parent:string;province:string;name:string;population:number;bounds:[number,number,number,number]};
+  lastConsumerSatisfied?:boolean;
+  personality?:"builder"|"diplomat"|"expansionist"|"guardian";
+  manpowerUsed?:number;
+  formedNation?:string;
+  ideology?:IdeologyId;stability?:number;politicalPower?:number;ideologyChangedAt?:number;civicPolicy?:"none"|"rights"|"welfare";consumerServed?:number;
+  nextAllianceAt?:number;
+  defenseReadiness?:{level:number;neighbor?:string;until:number;previousStances?:Record<number,LeaderStance>;previousSpending:number;previousPriority:NonNullable<NationState["industryPolicy"]>};
+  tradePolicy?: "free"|"balanced"|"closed";
+  industryPolicy?: "balanced"|"civilian"|"industrial"|"mobilized";
+  stockHistory?:{tick:number;value:number}[];
+  militarySpending?: number;
+  stockIndex?: number;
+  shares?: number;
   stockpile?: Stockpile;
   domesticSales?: boolean;
   commerceIncome?: number;
@@ -186,6 +242,12 @@ export interface War {
   since: number;
 }
 export interface Campaign {
+  coreStates?:Record<string,string>;
+  treaties?:Treaty[];
+  resistance?:Record<string,{level:number;since:number}>;
+  controlGroups?:Record<string,number[]>;
+  objective?:{kind:"economy"|"regional"|"formable";completedAt?:number};
+  affairs?: {relations:Record<string,number>;embassies:string[];news:NewsEvent[];nextNewsAt:number};
   clockVersion?:1;
   tickPhase?:number;
   pendingCommands?:GameCommand[];
@@ -228,3 +290,5 @@ export interface LegacyCampaign {
   queue: TrainingOrder[];
   result: Campaign["result"];
 }
+
+export interface NewsEvent {id:number;nation:string;target?:string;kind:"tension"|"nuclear"|"unrest"|"election"|"war"|"peace";title:string;story:string;severity:number;time:number;resolved?:boolean;escalated?:boolean;dismissed?:boolean;}

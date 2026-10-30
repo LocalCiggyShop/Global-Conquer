@@ -1,3 +1,7 @@
+import {mineMultiplier,techLevel} from "./technology";
+import {initializePolitics,ideologyOf,stabilityEffect,consumerDemand} from "./politics";
+import {advanceConstruction,constructionNeeds} from "./construction";
+import {relationScore,adjustRelation} from "./relations";
 import {TRADE_INTERVAL_TICKS} from "./game-clock";
 import {allied,atWar} from "./relations";
 import type {Building,Campaign,Commodity,FactoryRecipeId,Mineral,Stockpile} from "./types";
@@ -15,7 +19,7 @@ export const commodities = {
 } satisfies Record<Commodity,{name:string;price:number;color:string;extraction:number}>;
 export const commodityIds=Object.keys(commodities) as Commodity[];
 const minerals:Mineral[]=["iron","coal","copper","zinc","gold","diamonds"];
-const MAX_STOCK=10000,MARKET_TARGET=2000;
+const MAX_STOCK=10000;
 export interface FactoryRecipe {
  name:string;duration:number;cost:number;inputs:Partial<Stockpile>;
  output:{commodity:Commodity|"supplies";amount:number};
@@ -40,6 +44,7 @@ export function initializeEconomy(state:Campaign){
  for(const n of Object.values(state.nations)){
   if(!n.stockpile)n.stockpile={...stockpile(),...starter};
   for(const id of commodityIds)n.stockpile[id]=Math.min(1e7,finite(n.stockpile[id]));
+  n.tradePolicy??="balanced";n.industryPolicy??="balanced";
   n.domesticSales??=true;n.commerceIncome=finite(n.commerceIncome);
  }
  const indices=new Map<string,number>();
@@ -54,60 +59,92 @@ export function initializeEconomy(state:Campaign){
    b.progress=Math.min(factoryRecipes[b.recipe!].duration,finite(b.progress));b.enabled??=true;
   }
  }
- state.market??={stock:stockpile(MARKET_TARGET),trades:[]};
- for(const id of commodityIds)state.market.stock[id]=Math.min(20000,finite(state.market.stock[id],MARKET_TARGET));
+ state.market??={stock:stockpile(),trades:[]};
+ for(const id of commodityIds)state.market.stock[id]=Math.min(20000,finite(state.market.stock[id]));
  state.market.trades=Array.isArray(state.market.trades)?state.market.trades.slice(-24):[];
  state.market.recurring=(state.market.recurring??[]).filter(order=>Number.isInteger(order.id)&&state.nations[order.nation]&&Object.hasOwn(commodities,order.commodity)&&["buy","sell"].includes(order.side)&&Number.isInteger(order.quantity)&&order.quantity>=1&&order.quantity<=500).slice(0,24);
  for(const order of state.market.recurring){order.nextTick=Number.isFinite(order.nextTick)?Math.max(0,Math.ceil(order.nextTick)):Math.floor(state.elapsed)+TRADE_INTERVAL_TICKS;order.enabled=order.enabled!==false;}
  state.economyClock=finite(state.economyClock)%1;state.economyVersion=1;
 }
-export interface TradeQuote {unitPrice:number;total:number;error:string|null;}
+export interface TradeQuote {unitPrice:number;total:number;error:string|null;legs?:{partner:string;quantity:number;total:number}[];}
 export class IndustryEconomy {
  onRecurringSettlement:()=>void=()=>{};
  private aiAt:number;
- constructor(readonly state:Campaign){initializeEconomy(state);this.aiAt=state.elapsed+15;}
+ constructor(readonly state:Campaign){initializeEconomy(state);initializePolitics(state);this.aiAt=state.elapsed+15;}
  income(id:string){return this.state.nations[id]?.commerceIncome??0;}
  factories(id:string){return this.state.buildings.filter(b=>b.nation===id&&b.type==="factory"&&b.hp>0);}
- private scarcity(stock:number){return Math.min(2,Math.max(0.5,1+(MARKET_TARGET-stock)/MARKET_TARGET*0.6));}
+ outputMultiplier(nation:string,recipe:FactoryRecipeId){const social=this.state.nations[nation].ideology==="socialism"&&(recipe==="consumer"||recipe==="jewelry")?1.2:1;const p=this.state.nations[nation].industryPolicy;return social*(p==="civilian"?(recipe==="consumer"||recipe==="jewelry"?1.2:1):p==="industrial"?(recipe==="steel"||recipe==="electronics"?1.15:1):p==="mobilized"?(recipe==="arms"?1.25:0.9):1);}
+ balance(nation:string){
+  const net=stockpile(),demand=stockpile(),n=this.state.nations[nation];
+  for(const b of this.state.buildings){if(b.hp<=0||b.nation!==nation)continue;
+   if(b.construction){for(const [id,q] of Object.entries(constructionNeeds(b)))demand[id as Commodity]+=q;continue;}
+   if(b.type==="mine")net[b.mineral??"gold"]+=commodities[b.mineral??"gold"].extraction*(1+n.industry*0.08)*mineMultiplier(b)*(1+.08*techLevel(n,"economy"))*5;
+   if(b.type==="factory"&&b.enabled!==false){const r=factoryRecipes[b.recipe??"steel"],batches=5*(1+n.industry*0.05)*(1+.08*techLevel(n,"economy"))/r.duration;
+    for(const [id,q] of Object.entries(r.inputs))demand[id as Commodity]+=q*batches;
+    if(r.output.commodity!=="supplies"&&this.status(b)==="Producing")net[r.output.commodity]+=r.output.amount*batches*this.outputMultiplier(nation,b.recipe??"steel");
+   }
+  }
+  if(n.domesticSales!==false)demand.consumerGoods+=consumerDemand(n)*5;
+  for(const order of this.state.market!.recurring??[])if(order.nation===nation&&order.enabled){if(order.side==="buy")net[order.commodity]+=order.quantity/5;else demand[order.commodity]+=order.quantity/5;}
+  for(const id of commodityIds)net[id]-=demand[id];return {net,demand};
+ }
+ exportable(nation:string,commodity:Commodity){const n=this.state.nations[nation];return !n||n.defeated||n.tradePolicy==="closed"?0:Math.max(0,n.stockpile![commodity]-(n.tradePolicy==="free"?0:5));}
+ available(nation:string,commodity:Commodity,partner="world"){
+  return partner==="world"?Object.values(this.state.nations).reduce((sum,n)=>sum+(n.id!==nation&&!atWar(this.state,nation,n.id)&&relationScore(this.state,nation,n.id)>=-10?this.exportable(n.id,commodity):0),0):this.exportable(partner,commodity);
+ }
  quote(nation:string,commodity:Commodity,side:"buy"|"sell",quantity:number,partner="world"):TradeQuote{
   const fail=(error:string):TradeQuote=>({unitPrice:0,total:0,error});
-  if(this.state.result!=="playing")return fail("Trade is unavailable after the campaign ends.");
-  if(!Object.hasOwn(commodities,commodity)||!["buy","sell"].includes(side))return fail("Choose a valid commodity and trade direction.");
+  const n=this.state.nations[nation];
+  if(this.state.result!=="playing"||!n||n.defeated)return fail("Choose an active nation.");
+  if(!Object.hasOwn(commodities,commodity)||!["buy","sell"].includes(side))return fail("Choose a valid commodity and direction.");
   if(!Number.isInteger(quantity)||quantity<1||quantity>500)return fail("Trade between 1 and 500 units at a time.");
-  const n=this.state.nations[nation],other=this.state.nations[partner];
-  if(!Object.hasOwn(this.state.nations,nation)||!n||n.defeated)return fail("Choose an active nation.");
-  if(partner!=="world"&&(!Object.hasOwn(this.state.nations,partner)||!other||other.defeated||nation===partner||atWar(this.state,nation,partner)))return fail("Direct trade requires another peaceful nation.");
-  const market=this.state.market!.stock,start=market[commodity];
-  const end=partner==="world"?start+(side==="buy"?-quantity:quantity):start;
-  const friendly=partner!=="world"&&allied(this.state,nation,partner);
-  const spread=side==="buy"?(friendly?1.08:1.12):(friendly?0.92:0.88);
-  // Average both ends of the order so a large order cannot pump its own resale price.
-  const unitPrice=Math.round(commodities[commodity].price*(this.scarcity(start)+this.scarcity(end))/2*spread*100)/100;
-  const total=Math.round(unitPrice*quantity*100)/100;
-  const source=side==="buy"?(partner==="world"?market:other.stockpile!):n.stockpile!;
-  const destination=side==="buy"?n.stockpile!:(partner==="world"?market:other.stockpile!);
-  const buyer=side==="buy"?n:other;
-  let error:string|null=null;
-  if(source[commodity]+1e-8<quantity)error="The seller does not have enough stock.";
-  else if(destination[commodity]+quantity>(partner==="world"&&side==="sell"?20000:MAX_STOCK))error="The buyer's warehouse is full.";
-  else if(buyer&&buyer.credits+1e-8<total)error="The buyer does not have enough credits.";
-  return {unitPrice,total,error};
+  if(n.tradePolicy==="closed")return fail("Closed economy policy blocks foreign trade.");
+  if(partner==="world"){
+   const legs:NonNullable<TradeQuote['legs']>=[];let remaining=quantity,total=0;
+   for(const other of Object.values(this.state.nations)){
+    if(other.id===nation||other.defeated||other.tradePolicy==="closed"||atWar(this.state,nation,other.id)||relationScore(this.state,nation,other.id)<-10)continue;
+    const single=this.quote(nation,commodity,side,1,other.id);if(single.error)continue;
+    let amount=Math.min(remaining,Math.floor(side==="buy"?this.exportable(other.id,commodity):Math.min(this.exportable(nation,commodity),MAX_STOCK-other.stockpile![commodity])));
+    amount=Math.min(amount,Math.floor((side==="buy"?n.credits-total:other.credits)/single.unitPrice));
+    if(amount<=0)continue;
+    const quote=this.quote(nation,commodity,side,amount,other.id);if(quote.error)continue;
+    legs.push({partner:other.id,quantity:amount,total:quote.total});total+=quote.total;remaining-=amount;if(!remaining)break;
+   }
+   if(remaining)return fail(side==="buy"?"Other nations cannot supply the requested quantity under current policies.":"No eligible nations can fund and store this export.");
+   if(side==="buy"&&(n.credits<total||n.stockpile![commodity]+quantity>MAX_STOCK))return fail("Insufficient treasury or warehouse space.");
+   if(side==="sell"&&this.exportable(nation,commodity)<quantity)return fail("Export exceeds stock available under your trade policy.");
+   return {unitPrice:total/quantity,total:Math.round(total*100)/100,error:null,legs};
+  }
+  const other=this.state.nations[partner];
+  if(!other||other.defeated||nation===partner||atWar(this.state,nation,partner))return fail("Direct trade requires another peaceful nation.");
+  if(other.tradePolicy==="closed")return fail("This nation has a closed economy.");
+  if(relationScore(this.state,nation,partner)<-10)return fail("Relations are too strained for bilateral trade (minimum −10).");
+  const seller=side==="buy"?other:n,buyer=side==="buy"?n:other;
+  const friendly=allied(this.state,nation,partner)||relationScore(this.state,nation,partner)>=20;
+  const spread=side==="buy"?(friendly?1.04:1.08):(friendly?0.96:0.92);
+  const tariff=(buyer.tradePolicy==="free"?1:1.03);
+  const unitPrice=Math.round(commodities[commodity].price*spread*tariff*100)/100,total=Math.round(unitPrice*quantity*100)/100;
+  if(this.exportable(seller.id,commodity)+1e-8<quantity)return fail("The seller lacks exportable stock under its trade policy.");
+  if(buyer.stockpile![commodity]+quantity>MAX_STOCK)return fail("The buyer's warehouse is full.");
+  if(buyer.credits<total)return fail("The buyer does not have enough credits.");
+  return {unitPrice,total,error:null};
  }
  trade(nation:string,commodity:Commodity,side:"buy"|"sell",quantity:number,partner="world"):string|null{
   const quote=this.quote(nation,commodity,side,quantity,partner);if(quote.error)return quote.error;
-  const n=this.state.nations[nation],other=this.state.nations[partner],world=this.state.market!;
-  const source=side==="buy"?(partner==="world"?world.stock:other.stockpile!):n.stockpile!;
-  const destination=side==="buy"?n.stockpile!:(partner==="world"?world.stock:other.stockpile!);
-  source[commodity]=Math.max(0,source[commodity]-quantity);destination[commodity]+=quantity;
-  n.credits+=side==="buy"?-quote.total:quote.total;
-  if(other)other.credits+=side==="buy"?quote.total:-quote.total;
-  if(nation===this.state.nation){world.trades.push({time:this.state.elapsed,nation,partner,commodity,side,quantity,total:quote.total});world.trades=world.trades.slice(-24);}
-  return null;
+  const n=this.state.nations[nation],market=this.state.market!;
+  for(const leg of quote.legs??[{partner,quantity,total:quote.total}]){
+   const other=this.state.nations[leg.partner],seller=side==="buy"?other:n,buyer=side==="buy"?n:other;
+   seller.stockpile![commodity]-=leg.quantity;buyer.stockpile![commodity]+=leg.quantity;buyer.credits-=leg.total;seller.credits+=leg.total;
+   adjustRelation(this.state,nation,other.id,Math.min(0.25,leg.quantity*0.01));
+   if(other.id===this.state.nation)market.trades.push({time:this.state.elapsed,nation:other.id,partner:nation,commodity,side:side==="buy"?"sell":"buy",quantity:leg.quantity,total:leg.total});
+  }
+  if(nation===this.state.nation)market.trades.push({time:this.state.elapsed,nation,partner,commodity,side,quantity,total:quote.total});
+  market.trades=market.trades.slice(-24);return null;
  }
  schedule(nation:string,commodity:Commodity,side:"buy"|"sell",quantity:number,partner="world"):string|null{
   const quote=this.quote(nation,commodity,side,quantity,partner);
   // Stock and money may be produced before the first delivery; configuration must be valid now.
-  if(quote.error&&!['The seller does not have enough stock.',"The buyer's warehouse is full.",'The buyer does not have enough credits.'].includes(quote.error))return quote.error;
+  if(quote.error&&!/supply|fund and store|exportable stock|warehouse|credits|treasury/.test(quote.error))return quote.error;
   const orders=this.state.market!.recurring!;
   if(orders.length>=24)return "A campaign can have at most 24 recurring trade orders.";
   if(orders.some(o=>o.nation===nation&&o.partner===partner&&o.commodity===commodity&&o.side===side))return "A recurring order already exists for this commodity and partner. Cancel it to change the batch.";
@@ -147,12 +184,13 @@ export class IndustryEconomy {
   if(!b)return "Choose one of your operational factories.";b.enabled=b.enabled===false;return null;
  }
  status(b:Building):string{
+  if(b.construction)return "Under construction";
   if(b.enabled===false)return "Paused";const r=factoryRecipes[b.recipe??"steel"],n=this.state.nations[b.nation];
   if(n.credits<r.cost)return "Waiting for credits";
   const missing=Object.entries(r.inputs).filter(([key,q])=>n.stockpile![key as Commodity]+1e-8<q);
   if(missing.length)return "Needs "+missing.map(([key])=>commodities[key as Commodity].name).join(", ");
   const output=r.output.commodity==="supplies"?n.supplies:n.stockpile![r.output.commodity];
-  return output+r.output.amount>(r.output.commodity==="supplies"?9999:MAX_STOCK)?"Output storage full":"Producing";
+  return output+r.output.amount*this.outputMultiplier(n.id,b.recipe??"steel")>(r.output.commodity==="supplies"?9999:MAX_STOCK)?"Output storage full":"Producing";
  }
  tick(dt:number){
   this.state.economyClock!+=dt;
@@ -160,26 +198,26 @@ export class IndustryEconomy {
  }
  private advanceSecond(){
   const s=this.state;
-  for(const id of commodityIds){const v=s.market!.stock[id];s.market!.stock[id]=Math.max(0,Math.min(20000,v+(MARKET_TARGET-v)*0.002));}
+  advanceConstruction(s);
   for(const b of s.buildings){
-   const n=s.nations[b.nation];if(b.hp<=0||!n||n.defeated)continue;
+   const n=s.nations[b.nation];if(b.hp<=0||b.construction||!n||n.defeated)continue;
    if(b.type==="mine"){
-    const mineral=b.mineral??"gold";n.stockpile![mineral]=Math.min(MAX_STOCK,n.stockpile![mineral]+commodities[mineral].extraction*(1+n.industry*0.08));
+    const mineral=b.mineral??"gold";n.stockpile![mineral]=Math.min(MAX_STOCK,n.stockpile![mineral]+commodities[mineral].extraction*(1+n.industry*0.08)*mineMultiplier(b)*(1+.08*techLevel(n,"economy")));
    }else if(b.type==="factory"&&this.status(b)==="Producing"){
-    const r=factoryRecipes[b.recipe??"steel"];b.progress=(b.progress??0)+1+n.industry*0.05;
+    const r=factoryRecipes[b.recipe??"steel"];b.progress=(b.progress??0)+(1+n.industry*0.05)*(1+.08*techLevel(n,"economy"))*ideologyOf(n).production*stabilityEffect(n);
     if(b.progress+1e-8>=r.duration){
      // Inputs and operating cost change together only when a complete batch is ready.
      for(const [key,amount] of Object.entries(r.inputs))n.stockpile![key as Commodity]=Math.max(0,n.stockpile![key as Commodity]-amount);
      n.credits-=r.cost;
-     if(r.output.commodity==="supplies")n.supplies+=r.output.amount;else n.stockpile![r.output.commodity]+=r.output.amount;
+     if(r.output.commodity==="supplies")n.supplies=Math.min(9999,n.supplies+r.output.amount*this.outputMultiplier(n.id,b.recipe??"steel"));else n.stockpile![r.output.commodity]=Math.min(MAX_STOCK,n.stockpile![r.output.commodity]+r.output.amount*this.outputMultiplier(n.id,b.recipe??"steel"));
      b.progress=Math.max(0,b.progress-r.duration);
     }
    }
   }
   for(const n of Object.values(s.nations)){
    n.commerceIncome=0;if(n.defeated||n.domesticSales===false)continue;
-   const amount=Math.min(n.stockpile!.consumerGoods,0.2+n.industry*0.04);
-   n.stockpile!.consumerGoods-=amount;n.commerceIncome=Math.round(amount*12*100)/100;n.credits+=n.commerceIncome;
+   const amount=Math.min(n.stockpile!.consumerGoods,consumerDemand(n));
+   n.consumerServed=(n.consumerServed??0)+amount;n.stockpile!.consumerGoods-=amount;n.commerceIncome=Math.round(amount*12*100)/100;n.credits+=n.commerceIncome;
   }
   this.settleRecurring();
   if(s.elapsed>=this.aiAt){this.aiAt=s.elapsed+15;for(const n of Object.values(s.nations))if(n.id!==s.nation&&!n.defeated)this.manageAI(n.id);}
@@ -187,11 +225,16 @@ export class IndustryEconomy {
  private manageAI(nation:string){
   const n=this.state.nations[nation],desired=stockpile(30),factories=this.factories(nation);
   for(const b of factories)for(const [key,q] of Object.entries(factoryRecipes[b.recipe??"steel"].inputs))desired[key as Commodity]+=q*5;
-  let budget=Math.min(300,Math.max(0,n.credits-500));
+  for(const b of this.state.buildings)if(b.nation===nation&&b.construction)for(const [id,q] of Object.entries(constructionNeeds(b)))desired[id as Commodity]+=q*3;
+  const defensive=!!n.defenseReadiness;
+  if(defensive){desired.steel+=20;desired.copper+=10;desired.iron+=10;}
+  let budget=Math.min(300,Math.max(0,n.credits-(defensive?200:500)));
   for(const id of commodityIds){
    const spare=Math.floor(n.stockpile![id]-desired[id]);
    if(spare>=10)this.trade(nation,id,"sell",Math.min(25,spare));
   }
+  const importOrder=defensive?["steel","copper","iron",...commodityIds.filter(id=>!["steel","copper","iron"].includes(id))] as Commodity[]:commodityIds;
+  for(const id of importOrder){const missing=Math.ceil(Math.min(12,desired[id]-n.stockpile![id]));if(missing>0&&n.credits>(defensive?250:600)){const quote=this.quote(nation,id,"buy",missing);if(!quote.error&&quote.total<=budget){this.trade(nation,id,"buy",missing);budget-=quote.total;}}}
   for(const b of factories){
    for(const [key,q] of Object.entries(factoryRecipes[b.recipe??"steel"].inputs)){
     const id=key as Commodity,missing=Math.ceil(q*3-n.stockpile![id]);if(missing<=0)continue;

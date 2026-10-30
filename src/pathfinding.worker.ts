@@ -1,3 +1,4 @@
+import {trafficMask} from "./traffic-route";
 import { findPath, nearestOpen } from "./navigation";
 import type { Grid } from "./types";
 
@@ -23,7 +24,7 @@ function processNext() {
   }
   if(mask) {
     const start=nearestOpen(grid,mask,...message.from as [number,number]),end=nearestOpen(grid,mask,...message.to as [number,number],12);
-    self.postMessage({type:"path",id:message.id,serial:message.serial,order:message.order,revision,obstaclesRevision,path:findPath(grid,mask,start,end)});
+    self.postMessage({type:"path",id:message.id,serial:message.serial,order:message.order,revision,obstaclesRevision,traffic:!!message.traffic,path:findPath(grid,message.traffic?trafficMask(mask,message.traffic,start):mask,start,end)});
   }
   if(pending.size)schedule();
 }

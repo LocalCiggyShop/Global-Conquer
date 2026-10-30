@@ -1,3 +1,4 @@
+import {expandStacks} from "./unit-stacks";
 import { isShip } from "./geopolitics";
 import type { Campaign, LeaderBranch, LeaderStance, MilitaryLeader, Unit } from "./types";
 
@@ -7,7 +8,7 @@ export const branchOf = (unit: Pick<Unit, "type">): LeaderBranch => isShip(unit.
 
 /** Foreign, dead, duplicate, and embarked IDs cannot influence selection voting. Ties favor army. */
 export function majoritySelection(state: Campaign, ids: Iterable<number>, nation = state.nation) {
-  const selected = new Set(ids);
+  const selected = expandStacks(state.units,ids);
   const units = state.units.filter((u) => selected.has(u.id) && u.nation === nation && u.hp > 0 && !u.embarkedOn);
   const army = units.filter((u) => branchOf(u) === "army");
   const navy = units.filter((u) => branchOf(u) === "navy");

@@ -174,7 +174,7 @@ export class GlobeView {
         this.makeBorders(
           this.data.countries.filter(
             (c) =>
-              c.continent === region.name || (id === "asia" && c.id === "RUS"),
+              c.continent === region.name || (id === "asia-pacific" && (["Asia","Oceania"].includes(c.continent)||c.id === "RUS")) || (id === "americas" && ["North America","South America"].includes(c.continent)),
           ),
           "#e4c48b",
           0.9,

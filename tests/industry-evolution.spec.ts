@@ -1,0 +1,28 @@
+import {test,expect} from '@playwright/test';
+import {gzipSync} from 'node:zlib';
+import {createGrid} from '../src/navigation';
+import {createCampaign,Simulation} from '../src/campaign';
+import {campaignSnapshot} from '../src/snapshot';
+import type {ContinentData} from '../src/types';
+test('factory click controls, material deficit, policies, readable headings and stock chart',async({page})=>{
+ const data:ContinentData={id:'europe',kmPerUnit:45,bounds:[-44,-24,44,24],lakes:[],countries:[{id:'RUS',name:'Russia',flagCode:'ru',population:20e6,bounds:[-40,-20,0,20],polygons:[[[[-40,-20],[0,-20],[0,20],[-40,20]]]]},{id:'USA',name:'United States',flagCode:'us',population:20e6,bounds:[0,-20,40,20],polygons:[[[[0,-20],[40,-20],[40,20],[0,20]]]]}]};
+ const grid=createGrid(data),sim=new Simulation(data,grid,createCampaign(data,grid,'RUS'));sim.state.units=[];sim.playerNation.credits=5000;sim.playerNation.stockpile!.iron=100;sim.playerNation.stockpile!.coal=100;sim.state.affairs!.nextNewsAt=1e9;for(const n of Object.values(sim.state.nations))n.nextActionAt=1e9;
+ expect(sim.build('factory',-10,-10)).toBeNull();const factory=sim.state.buildings.at(-1)!;delete factory.construction;
+ expect(sim.build('barracks',-10,8)).toBeNull();sim.playerNation.stockpile!.steel=0;
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/data/europe.json.gz',r=>r.fulfill({body:gzipSync(JSON.stringify(data)),contentType:'application/gzip'}));await page.addInitScript(save=>localStorage.setItem('worldrts.campaigns.v2',JSON.stringify({europe:save})),campaignSnapshot(sim.state));
+ await page.goto('/');await expect(page.locator('#deploy-button')).toBeEnabled();await page.locator('#deploy-button').click();await page.waitForFunction(()=>window.__worldRTS?.mode==='play');
+ await page.locator('[data-workspace="map"]').click();const point=await page.evaluate(()=>window.__worldRTS.project(-10,-10));await page.mouse.click(point.x,point.y);
+ await expect(page.locator('#industry-panel')).toBeVisible();await expect(page.locator(`[data-factory="${factory.id}"]`)).toBeVisible();
+ await expect(page.locator('[data-balance="iron"]')).toContainText('Deficit');await expect(page.locator('#construction-list')).toContainText('0/3 days');
+ expect(await page.locator('#industry-panel h2').evaluate(e=>getComputedStyle(e).fontFamily)).toContain('Manrope');
+ await page.locator('#trade-policy').selectOption('closed');await page.waitForFunction(()=>window.__worldRTS.state.nations.RUS.tradePolicy==='closed');
+ await page.locator(`[data-factory-recipe="${factory.id}"]`).selectOption('electronics');await page.waitForFunction(id=>window.__worldRTS.state.buildings.find(b=>b.id===id)!.recipe==='electronics',factory.id);
+ await expect(page.locator('[data-factory-status]')).toContainText('Producing');await page.screenshot({path:'.cache/industry-evolution.png'});
+ await page.locator('#industry-close').click();await page.locator('#affairs-button').click();await expect(page.locator('#stock-chart svg polyline')).toBeVisible();await expect(page.locator('#stock-chart')).toHaveAttribute('aria-label',/Stock index history/);await page.screenshot({path:'.cache/stock-history.png'});
+ await page.clock.install();
+ await page.evaluate(()=>{const s=window.__worldRTS.state;for(const severity of [2,4])s.affairs!.news.push({id:s.nextId++,nation:'RUS',target:'USA',kind:severity===4?'nuclear':'tension',title:`Timeout test ${severity}`,story:'A fictional campaign report.',severity,time:s.elapsed});});
+ await page.clock.runFor(1000);await expect(page.locator('.news-modal')).toHaveCount(2);await page.clock.fastForward(16000);await expect(page.locator('.news-modal')).toHaveCount(1);await expect(page.locator('.news-modal')).toHaveClass(/severity-4/);await page.clock.fastForward(15000);await expect(page.locator('.news-modal')).toHaveCount(0);
+ expect(await page.evaluate(()=>window.__worldRTS.state.affairs!.news.filter(e=>e.title.startsWith('Timeout test')).every(e=>e.dismissed&&!e.resolved))).toBe(true);
+ expect(errors).toEqual([]);
+});

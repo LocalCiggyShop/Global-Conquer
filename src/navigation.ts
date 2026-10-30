@@ -351,13 +351,19 @@ export function nationSpawn(
 
 /** Validate existing routes after control or obstacles change, including diagonal corner clearance. */
 export function routeCellsClear(grid:Grid,from:Point,path:Point[],allowed:(index:number)=>boolean):boolean {
-  let previous=cellAt(grid,...from);
+  let previous=cellAt(grid,...from),origin=from;
+  if(previous<0)return false;
   for(const point of path) {
-    const index=cellAt(grid,...point);
-    if(index<0||!allowed(index))return false;
-    const dx=index%grid.width-previous%grid.width,dz=Math.floor(index/grid.width)-Math.floor(previous/grid.width);
-    if(Math.abs(dx)===1&&Math.abs(dz)===1&&(!allowed(previous+dx)||!allowed(previous+dz*grid.width)))return false;
-    previous=index;
+    // Check every crossed cell, including long asynchronous route shortcuts.
+    const steps=Math.max(1,Math.ceil(Math.max(Math.abs(point[0]-origin[0]),Math.abs(point[1]-origin[1]))/grid.cell*2));
+    for(let step=1;step<=steps;step++){
+      const t=step/steps,index=cellAt(grid,origin[0]+(point[0]-origin[0])*t,origin[1]+(point[1]-origin[1])*t);
+      if(index<0||!allowed(index))return false;
+      const dx=index%grid.width-previous%grid.width,dz=Math.floor(index/grid.width)-Math.floor(previous/grid.width);
+      if(dx&&dz&&(!allowed(previous+dx)||!allowed(previous+dz*grid.width)))return false;
+      previous=index;
+    }
+    origin=point;
   }
   return true;
 }

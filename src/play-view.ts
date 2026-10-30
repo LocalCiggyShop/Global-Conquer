@@ -1,3 +1,6 @@
+import { attachConstructionSite, updateConstructionSite } from "./construction-visual";
+import { UnitModelAssets } from "./unit-model-assets";
+import {formedName} from "./formables";
 import * as THREE from "three";
 import { MapControls } from "three/addons/controls/MapControls.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
@@ -26,6 +29,8 @@ const PLAYER = "#66CBB5",
 const NEUTRAL = "#9ebee0";
 interface Model {
   group: THREE.Group;
+  fallback: THREE.Group;
+  muzzle?: THREE.Mesh;
   ring: THREE.Mesh;
   health: THREE.Mesh;
   bar: THREE.Group;
@@ -41,6 +46,29 @@ export class PlayView {
   readonly units = new Map<number, Model>();
   readonly buildings = new Map<number, THREE.Group>();
   readonly selected = new Set<number>();
+  mapMode:"political"|"military"|"supply"|"resources"="political";
+  private modeKey="";
+  private supplyLines=new THREE.Group();
+  setMapMode(mode:typeof this.mapMode){this.mapMode=mode;this.modeKey="";this.politicalKey="";this.refreshTerritory();this.refreshMapMode();}
+  private refreshMapMode(){
+    const sim=this.simulation,s=sim.state,key=[this.mapMode,sim.territory.landRevision,sim.logistics.revision,s.wars.map(w=>w.a+w.b).join(','),s.alliances?.length,s.nodes.length].join('|');
+    if(key===this.modeKey)return;this.modeKey=key;
+    for(const child of [...this.supplyLines.children])disposeObject(child);
+    if(this.mapMode==="political"){this.politicalTerrain.update(s);return;}
+    const colors=new Map<string,THREE.Color>();const color=(hex:string)=>{let c=colors.get(hex);if(!c){c=new THREE.Color(hex).multiplyScalar(.72);colors.set(hex,c);}return c;};
+    const deposits=new Map<number,string>();if(this.mapMode==="resources")for(const node of s.nodes)deposits.set(sim.territory.membership[cellAt(this.grid,node.x,node.z)],commodities[node.mineral??"iron"].color);
+    this.politicalTerrain.update(s,(index,id)=>{
+      if(this.mapMode==="military")return color(id===s.nation?"#66cbb5":sim.atWar(s.nation,id)?"#d87570":sim.allied(s.nation,id)?"#6e99bd":"#687681");
+      if(this.mapMode==="resources")return color(deposits.get(sim.territory.membership[index])??"#53646d");
+      if(id!==s.nation&&!sim.allied(s.nation,id))return color("#53616b");
+      const supply=sim.logistics.level(s.nation,index);return color(supply>.7?"#66cbb5":supply>=.4?"#ddb565":"#d87570");
+    });
+    if(this.mapMode==="supply")for(const [a,b] of sim.logistics.routes.get(s.nation)??[]){this.supplyLines.add(pathLine([sim.territory.states[a].center,sim.territory.states[b].center],"#b0ded4"));}
+  }
+  private readonly modelAssets = new UnitModelAssets();
+  private readonly modelScreen = new THREE.Vector3();
+  prepareUnitGraphics(renderer: THREE.WebGLRenderer) { return this.modelAssets.prepareGraphics(renderer, this.camera, this.scene); }
+  get assetStats() { return this.modelAssets.stats; }
   readonly modelStats = { unitsCreated:0, buildingsCreated:0 };
   private cityBlocks: THREE.InstancedMesh | null = null;
   private readonly cityOverlay:CityOverlay;
@@ -145,6 +173,7 @@ export class PlayView {
     this.scene.add(this.stateBorders);
     this.politicalTerrain = new PoliticalTerrain(grid, data,prepared?.fields);
     for (const country of data.countries) {
+      if(!country.polygons.length)continue;
       const color = new THREE.Color(
         nationColor(country.id, data),
       ).multiplyScalar(0.72);
@@ -169,6 +198,7 @@ export class PlayView {
       this.countryLabels.push(label);
       this.scene.add(label);
     }
+    this.refreshNationalLabels();
     const lakeMaterial = oceanMaterial.clone();
     lakeMaterial.vertexShader=`varying vec2 seaPosition;
       void main(){seaPosition=position.xz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`;
@@ -179,10 +209,10 @@ export class PlayView {
       this.scene.add(mesh);
       pieces.forEach((piece) => piece.dispose());
     }
-    this.scene.add(this.pathGroup, this.nodeGroup, this.frontlineGroup);
+    this.scene.add(this.pathGroup, this.nodeGroup, this.frontlineGroup,this.supplyLines);
     this.createNodes();
     this.createWorldDetails();
-    this.cityOverlay=new CityOverlay(canvas,data,simulation);
+    this.cityOverlay=new CityOverlay(canvas,data,simulation,id=>this.units.get(id)?.group.position);
     this.ghost = new THREE.Mesh(
       new THREE.BoxGeometry(0.84, 0.16, 0.84),
       new THREE.MeshBasicMaterial({
@@ -287,7 +317,9 @@ export class PlayView {
   }
   async finishLabels(layouts:ReturnType<typeof nationLabelLayouts>,progress:(value:number)=>void){
     for(let i=0;i<layouts.length;i++){const label=nationLabelMesh(layouts[i]);this.countryLabels.push(label);this.scene.add(label);if(i%8===0){progress(i/layouts.length);await new Promise<void>((resolve)=>requestAnimationFrame(()=>resolve()));}}
+    this.refreshNationalLabels();
   }
+  get visibleNationLabels(){return this.countryLabels.filter(label=>label.visible).map(label=>label.userData.layout?.id as string).filter(Boolean);}
   get visibleCityNames(){return [...this.cityOverlay.visibleNames];}
   private createWorldDetails() {
     const cities = this.simulation.state.cities ?? [];
@@ -329,7 +361,7 @@ export class PlayView {
         if(victor)record.material.color.set(this.nationColor(victor)).multiplyScalar(0.72);
         else record.material.color.copy(record.color);
       }
-      this.politicalTerrain.update(s);
+      this.politicalTerrain.update(s);this.modeKey="";
       update(this.landOverlay,s.occupation,0.11,(tile)=>activeOccupation(s,tile));
       for(let i=0;i<(s.cities?.length??0);i++) {
         const c=s.cities![i];
@@ -434,6 +466,14 @@ export class PlayView {
         group.add(track);
       }
     }
+    const fallback = new THREE.Group();
+    fallback.add(...group.children.slice());
+    group.add(fallback);
+    let muzzle:THREE.Mesh|undefined;
+    if(unit.type==="armor"){
+      muzzle=new THREE.Mesh(new THREE.IcosahedronGeometry(.1,0),new THREE.MeshBasicMaterial({color:"#ffda91"}));
+      muzzle.position.set(0,.5,-.95);muzzle.visible=false;group.add(muzzle);
+    }
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(
         unit.type === "armor" ? 0.8 : 0.52,
@@ -467,7 +507,7 @@ export class PlayView {
     group.add(bar);
     group.position.set(unit.x, 0.1, unit.z);
     this.scene.add(group);
-    return { group, ring, health, bar, from:group.position.clone(), target:group.position.clone(), movedTick:this.simulation.state.elapsed };
+    return { group, fallback, muzzle, ring, health, bar, from:group.position.clone(), target:group.position.clone(), movedTick:this.simulation.state.elapsed };
   }
 
   private makeBuilding(b: Building) {
@@ -522,6 +562,8 @@ export class PlayView {
         const stack=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.18,1.4,6),concrete);
         stack.position.set(x,1.65,-0.4);group.add(stack);
       }
+    } else if(b.type==="depot"){
+      for(const x of [-.45,.1,.6]){const crate=new THREE.Mesh(new THREE.BoxGeometry(.35,.35,.5),trim);crate.position.set(x,.35,1);group.add(crate);}
     } else if (b.type === "mine") {
       const derrick = new THREE.Mesh(
         new THREE.CylinderGeometry(0.12, 0.4, 1.9, 4, 1, true),
@@ -551,6 +593,8 @@ export class PlayView {
     );
     flag.position.set(1.22, 2.3, 0.85);
     group.add(flag);
+    attachConstructionSite(group,{base:plinth,body:block,roof,
+      details:group.children.filter(part=>!([plinth,block,roof,pole,flag] as THREE.Object3D[]).includes(part)),finishing:[pole,flag]},b);
     const title = labelSprite(
       b.type === "hq" ? "HQ" : b.type,
       color,
@@ -574,13 +618,16 @@ export class PlayView {
   }
 
   private syncModels(dt: number) {
+    this.modelAssets.beginFrame();
     const live = new Set(this.simulation.state.units.map((u) => u.id));
     for (const [id, model] of this.units)
       if (!live.has(id)) {
+        this.modelAssets.remove(id);
         disposeObject(model.group,new Set([this.unitGeometry,this.headGeometry]));
         this.units.delete(id);
         this.selected.delete(id);
       }
+    const stacks=this.simulation.visibleStacks();
     for (const u of this.simulation.state.units) {
       const visible = this.simulation.visibility.canSee(
         this.simulation.state.nation,
@@ -592,11 +639,13 @@ export class PlayView {
         this.selected.delete(u.id);
         continue;
       }
+      if(stacks.representatives.get(u.id)!==u.id){if(model)model.group.visible=false;continue;}
       if (!model) {
         model = this.makeUnit(u);
         this.units.set(u.id, model);
       }
       model.group.visible = true;
+      const previousX = model.group.position.x, previousZ = model.group.position.z;
       const next = new THREE.Vector3(u.x, 0.1, u.z);
       if(!model.target.equals(next)){
         // Render between authoritative tick positions; relocations snap instead of crossing borders.
@@ -610,19 +659,30 @@ export class PlayView {
           angle = Math.atan2(p[0] - u.x, p[1] - u.z) + Math.PI;
         model.group.rotation.y = angle;
       }
+      const fireAge=this.simulation.state.elapsed-(u.lastFiredAt??-100)+(this.simulation.state.tickPhase??0);
+      if(model.muzzle)model.muzzle.visible=fireAge<.2;
+      if(fireAge<.5&&u.lastShotTarget&&!u.path.length)model.group.rotation.y=Math.atan2(u.lastShotTarget[0]-u.x,u.lastShotTarget[1]-u.z)+Math.PI;
       model.ring.visible =
-        this.selected.has(u.id) ||
+        (stacks.groups.get(u.id)??[u]).some(member=>this.selected.has(member.id)) ||
         this.simulation.atWar(u.nation, this.simulation.state.nation);
       (model.ring.material as THREE.MeshBasicMaterial).color.set(
         this.simulation.atWar(u.nation, this.simulation.state.nation)
           ? "#ff9e94"
           : this.simulation.command.forUnit(u)?.color ?? this.nationColor(u.nation),
       );
+      this.modelScreen.copy(model.group.position).project(this.camera);
+      const onScreen = Math.abs(this.modelScreen.x) < 1.1 && Math.abs(this.modelScreen.y) < 1.1 && Math.abs(this.modelScreen.z) <= 1;
+      const moving = Math.abs(previousX-model.group.position.x)+Math.abs(previousZ-model.group.position.z) > .00001;
+      this.modelAssets.update(u, model.group, model.fallback, onScreen && this.camera.zoom >= 4,
+        moving, (u.lastFiredAt ?? -100) >= this.simulation.state.elapsed - 1, dt, this.simulation.paused,fireAge);
       model.bar.quaternion.copy(this.camera.quaternion);
       model.bar.quaternion.premultiply(model.group.quaternion.clone().invert());
-      model.bar.visible = this.selected.has(u.id) || u.hp < u.maxHp;
-      model.health.scale.x = Math.max(0, u.hp / u.maxHp);
+      model.bar.visible = (stacks.groups.get(u.id)??[u]).some(member=>this.selected.has(member.id)) || u.hp < u.maxHp;
+      const members=stacks.groups.get(u.id)??[u];
+      model.bar.visible=members.some(m=>this.selected.has(m.id)||m.hp<m.maxHp);
+      model.health.scale.x = members.reduce((sum,m)=>sum+m.hp,0)/members.reduce((sum,m)=>sum+m.maxHp,0);
     }
+    this.modelAssets.endFrame();
     const liveBuildings=new Set(this.simulation.state.buildings.filter((b)=>b.hp>0).map((b)=>b.id));
     for (const [id, group] of this.buildings)
       if (!liveBuildings.has(id)) {
@@ -631,7 +691,7 @@ export class PlayView {
       }
     for (const b of this.simulation.state.buildings)
       if (b.hp > 0) {
-        if(b.type==="dock"&&this.data.ports){const old=this.buildings.get(b.id);if(old){disposeObject(old);this.buildings.delete(b.id);}continue;}
+        if(b.type==="dock"&&this.data.ports&&!b.construction){const old=this.buildings.get(b.id);if(old){disposeObject(old);this.buildings.delete(b.id);}continue;}
         const visible = this.simulation.visibility.canSeeBuilding(this.simulation.state.nation, b);
         let model = this.buildings.get(b.id);
         if (!visible) { if (model) model.visible = false; continue; }
@@ -645,6 +705,7 @@ export class PlayView {
           this.buildings.set(b.id, model);
         }
         model.visible = true;
+        updateConstructionSite(model,b);
         const title=model.getObjectByName("title");
         if(title)title.visible=b.nation===this.simulation.state.nation||this.simulation.atWar(b.nation,this.simulation.state.nation);
         const health = model.getObjectByName("health")!;
@@ -665,9 +726,19 @@ export class PlayView {
     return nationColor(id, this.data);
   }
 
+  private refreshNationalLabels(){
+    for(let i=0;i<this.countryLabels.length;i++){
+      const old=this.countryLabels[i],layout=old.userData.layout as ReturnType<typeof nationLabelLayouts>[number];if(!layout)continue;
+      const state=this.simulation.state,n=state.nations[layout.id];old.visible=!(n?.annexedBy&&state.nations[n.annexedBy]?.formedNation);
+      const display=formedName(state,layout.id,"");if(!display||old.userData.displayName===display)continue;
+      const words=display.toUpperCase().split(" "),next=nationLabelMesh({...layout,lines:display.length>22?[words.slice(0,-1).join(" "),words.at(-1)!]:[display.toUpperCase()],angle:0});
+      next.userData.displayName=display;disposeObject(old);this.countryLabels[i]=next;this.scene.add(next);
+    }
+  }
   refreshRelations() {
+    this.refreshNationalLabels();
     // Relations affect colours and labels; existing models remain reusable.
-    this.politicalKey=""; this.seaKey=""; this.territoryRevision=-1;
+    this.modeKey="";this.politicalKey=""; this.seaKey=""; this.territoryRevision=-1;
   }
 
   groundPoint(clientX: number, clientY: number): Point | null {
@@ -686,6 +757,15 @@ export class PlayView {
     return hit ? [hit.x, hit.z] : null;
   }
 
+  pickBuilding(clientX:number,clientY:number):number|null{
+    const rect=this.canvas.getBoundingClientRect(),v=new THREE.Vector3();let best=12,result:number|null=null;
+    for(const b of this.simulation.state.buildings){if(b.hp<=0||!this.simulation.visibility.canSeeBuilding(this.simulation.state.nation,b))continue;v.set(b.x,.4,b.z).project(this.camera);if(v.z < -1||v.z>1)continue;const d=Math.hypot(rect.left+(v.x+1)*rect.width/2-clientX,rect.top+(1-v.y)*rect.height/2-clientY);if(d<best){best=d;result=b.id;}}return result;
+  }
+  pickFactory(clientX:number,clientY:number):number|null{
+    const rect=this.canvas.getBoundingClientRect(),v=new THREE.Vector3();let best=14,result:number|null=null;
+    for(const b of this.simulation.state.buildings){if(b.type!=="factory"||b.hp<=0||b.nation!==this.simulation.state.nation)continue;v.set(b.x,0.6,b.z).project(this.camera);if(v.z < -1||v.z>1)continue;const d=Math.hypot(rect.left+(v.x+1)*rect.width/2-clientX,rect.top+(1-v.y)*rect.height/2-clientY);if(d<best){best=d;result=b.id;}}
+    return result;
+  }
   pickUnit(clientX: number, clientY: number): number | null {
     const rect = this.canvas.getBoundingClientRect();
     this.raycaster.setFromCamera(
@@ -722,7 +802,8 @@ export class PlayView {
     if (!additive) this.selected.clear();
     const rect = this.canvas.getBoundingClientRect();
     for (const u of this.simulation.playerUnits) {
-      const p = (this.units.get(u.id)?.group.position.clone()??new THREE.Vector3(u.x,0.5,u.z)).project(this.camera);
+      const rep=this.simulation.visibleStacks().representatives.get(u.id)??u.id;
+      const p = (this.units.get(rep)?.group.position.clone()??new THREE.Vector3(u.x,0.5,u.z)).project(this.camera);
       const x = rect.left + ((p.x + 1) * rect.width) / 2,
         y = rect.top + ((1 - p.y) * rect.height) / 2;
       if (
@@ -790,7 +871,8 @@ export class PlayView {
     if (this.territoryRevision !== this.simulation.territory.revision)
       this.refreshTerritory();
     for (const label of this.countryLabels) {
-      label.visible = this.camera.zoom < 14;
+      const id=label.userData.layout?.id as string|undefined,nation=id?this.simulation.state.nations[id]:undefined;
+      label.visible = this.camera.zoom < 14 && !(nation?.annexedBy&&this.simulation.state.nations[nation.annexedBy]?.formedNation);
       label.material.opacity =
         0.86 * THREE.MathUtils.clamp((14 - this.camera.zoom) / 6, 0, 1);
     }
@@ -817,15 +899,18 @@ export class PlayView {
     this.camera.position.x += dx;
     this.camera.position.z += dz;
     this.camera.updateMatrixWorld();
-    this.cityOverlay.update(this.camera);
+    this.refreshMapMode();
     this.syncModels(dt);
+    this.cityOverlay.update(this.camera);
     this.pathTimer -= dt;
     if (this.pathTimer <= 0) {
       this.pathTimer = 0.25;
       for (const object of [...this.pathGroup.children]) disposeObject(object);
-      for (const u of this.simulation.playerUnits)
-        if (this.selected.has(u.id) && u.path.length)
-          this.pathGroup.add(pathLine([[this.units.get(u.id)?.group.position.x??u.x, this.units.get(u.id)?.group.position.z??u.z], ...u.path], this.simulation.command.forUnit(u)?.color ?? PLAYER));
+      const shown=new Set<string>();
+      for (const u of this.simulation.playerUnits)if(this.selected.has(u.id)&&u.path.length){
+        const rep=this.simulation.visibleStacks().representatives.get(u.id)??u.id,key=rep+":"+u.path.at(-1)?.join(":");if(shown.has(key))continue;shown.add(key);
+        const model=this.units.get(rep);this.pathGroup.add(pathLine([[model?.group.position.x??u.x,model?.group.position.z??u.z],...u.path,...(u.waypoints??[])],this.simulation.command.forUnit(u)?.color??PLAYER));
+      }
       this.refreshFrontlines();
     }
     this.orderLife -= dt;
@@ -988,11 +1073,12 @@ export class PlayView {
   countryAt(point: Point) {
     const index = cellAt(this.grid, ...point);
     return index >= 0 && this.grid.owners[index] >= 0
-      ? this.data.countries[this.grid.owners[index]]
+      ? this.data.countries.find(c=>c.id===(this.simulation.territory.stateAt(index)?this.simulation.territory.coreNation(this.simulation.territory.stateAt(index)!):this.data.countries[this.grid.owners[index]].id))??this.data.countries[this.grid.owners[index]]
       : null;
   }
 
   dispose() {
+    this.modelAssets.dispose();
     this.cityOverlay.dispose();
     this.politicalTerrain.dispose();
     this.controls.dispose();

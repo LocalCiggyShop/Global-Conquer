@@ -3,7 +3,7 @@ import { MilitaryCommand, leaderBonuses, leaderLevel, majoritySelection } from "
 import { activeOccupation, activeSeaControl } from "./territory-style";
 import {preparePoliticalFields} from "./political-fields";
 import { PoliticalTerrain } from "./political-terrain";
-import { createCampaign, Simulation, unitSpecs } from "./campaign";
+import { createCampaign, Simulation } from "./campaign";
 import { createGrid, cellAt } from "./navigation";
 import type { Campaign, ContinentData, LeaderBranch, Point, Unit } from "./types";
 
@@ -70,12 +70,13 @@ describe("separate army and naval commands",()=>{
     const sim=setup(), a=troop(sim.state,"infantry"), enemy=troop(sim.state,"infantry","BBB"), general=leader(sim,"army");
     a.x=-1.5; enemy.x=1.5;
     sim.command.assign([a.id],general.id); sim.setLeaderStance(general.id,"attack"); sim.declareWar("BBB");
-    const before=enemy.hp; sim.step(1);
-    expect(before-enemy.hp).toBeCloseTo(18*leaderBonuses(general).damage);
+    const baseline=setup(),plain=troop(baseline.state,"infantry"),rival=troop(baseline.state,"infantry","BBB");plain.x=-1.5;rival.x=1.5;baseline.declareWar("BBB");
+    const before=enemy.hp; sim.step(1);baseline.step(1);
+    expect(before-enemy.hp).toBeCloseTo((90-rival.hp)*leaderBonuses(general).damage);
     expect(general.experience).toBeCloseTo(before-enemy.hp);
-    enemy.hp=0; a.x=-15; a.path=[[-10,0]]; const x=a.x;
-    sim.step(1);
-    expect(a.x-x).toBeCloseTo(unitSpecs.infantry.speed*leaderBonuses(general).speed);
+    enemy.hp=0;rival.hp=0;a.hp=90;plain.hp=90;a.x=-15;plain.x=-15;a.path=[[-10,0]];plain.path=[[-10,0]];const x=a.x;
+    sim.step(1);baseline.step(1);
+    expect(a.x-x).toBeGreaterThan(0);expect((a.x-x)/(plain.x+15)).toBeCloseTo(leaderBonuses(general).speed);
     general.experience=20000;
     expect(leaderLevel(general)).toBe(5); expect(leaderBonuses(general).damage).toBeCloseTo(1.12);
   });
@@ -92,6 +93,7 @@ describe("settled territory presentation",()=>{
     expect(sim.territory.controllerAt(index)).toBe("AAA");
     // Historical borders may belong to a third nation; the actual war opponent controls overlay status.
     const third={controller:"AAA",original:"CCC",opponent:"BBB",since:0};
+    sim.state.elapsed=151; // The peace truce must expire before a new declaration.
     sim.declareWar("BBB");
     expect(activeOccupation(sim.state,record)).toBe(false); // Settled borders stay normal in a later war.
     expect(activeOccupation(sim.state,third)).toBe(true);

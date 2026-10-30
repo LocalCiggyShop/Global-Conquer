@@ -264,5 +264,6 @@ export function nationLabelMesh(
   mesh.rotation.set(-Math.PI / 2, 0, -layout.angle);
   mesh.position.set(layout.x, 0.16, layout.z);
   mesh.renderOrder = 2;
+  mesh.userData.layout=layout;
   return mesh;
 }

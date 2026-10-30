@@ -1,3 +1,4 @@
+import {expandStacks,unitStacks} from "./unit-stacks";
 import { cellAt, cellPoint, nearestOpen } from "./navigation";
 import { isShip, troopSpace } from "./geopolitics";
 import type { Campaign, Grid, Point, Unit } from "./types";
@@ -62,6 +63,7 @@ export class Naval {
     return i >= 0 && this.coastMask[i] === 1;
   }
   embark(ids: number[], nation = this.state.nation): string | null {
+    ids=[...expandStacks(this.state.units,ids)];
     const troops = this.state.units.filter(
       (u) =>
         ids.includes(u.id) &&
@@ -73,7 +75,8 @@ export class Naval {
     if (!troops.length)
       return "Select ground troops near a friendly transport.";
     let count = 0;
-    for (const u of troops) {
+    for (const group of unitStacks(troops).groups.values()) {
+      const u=group[0],required=group.reduce((n,t)=>n+troopSpace(t.type),0);
       const ships = this.state.units
         .filter(
           (s) =>
@@ -96,7 +99,8 @@ export class Naval {
             ),
           0,
         );
-        if (used + troopSpace(u.type) > 6) continue;
+        if (used + required > 6) continue;
+        for(const u of group){
         delete u.frontline;
         u.embarkedOn = ship.id;
         u.order++;
@@ -106,12 +110,13 @@ export class Naval {
         u.x = ship.x;
         u.z = ship.z;
         count++;
+        }
         break;
       }
     }
     return count
       ? null
-      : "Move troops within 4 map units of a friendly transport with free capacity (6 infantry / 3 armor).";
+      : "Move troops within 4 map units of a friendly transport with free capacity (6 infantry / 3 armor). Split a stack manually if it cannot fit in one transport.";
   }
   disembark(
     ids: number[],
@@ -119,7 +124,8 @@ export class Naval {
     nation = this.state.nation,
   ): string | null {
     if (target && !this.canEnter(nation, cellAt(this.grid, ...target))) return "Landings require ownership, an alliance, or declared war.";
-    let unloaded = 0;
+    ids=[...expandStacks(this.state.units,ids)];
+    let unloaded = 0;const landed=new Map<number,number>();
     const available = this.land().slice();
     for (const u of this.state.units)
       if (u.hp > 0 && !u.embarkedOn && !isShip(u.type)) {
@@ -136,11 +142,11 @@ export class Naval {
       for (const id of [...(ship.cargo ?? [])]) {
         const troop = this.state.units.find((u) => u.id === id);
         if (!troop) continue;
-        let index = -1,
+        let index = troop.stackId!==undefined?(landed.get(troop.stackId)??-1):-1,
           best = Infinity;
         const center = cellAt(this.grid, ship.x, ship.z),
           radius = Math.ceil(4 / this.grid.cell);
-        for (let dz = -radius; dz <= radius; dz++)
+        if(index<0)for (let dz = -radius; dz <= radius; dz++)
           for (let dx = -radius; dx <= radius; dx++) {
             const row = Math.floor(center / this.grid.width) + dz,
               col = (center % this.grid.width) + dx;
@@ -166,7 +172,7 @@ export class Naval {
           }
         if (index < 0) continue;
         const p = cellPoint(this.grid, index);
-        available[index] = 0;
+        available[index] = 0;if(troop.stackId!==undefined)landed.set(troop.stackId,index);
         troop.x = p[0];
         troop.z = p[1];
         delete troop.embarkedOn;

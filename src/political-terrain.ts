@@ -29,12 +29,13 @@ export class PoliticalTerrain {
    `);
   };
  }
- update(state:Campaign) {
+ update(state:Campaign,resolve?:(index:number,id:string)=>THREE.Color) {
+  for(const id of Object.keys(state.nations))if(!this.colors.has(id))this.colors.set(id,new THREE.Color(nationColor(id,this.data)).multiplyScalar(.72));
   for(const {field,pixels,texture} of this.layers.values()) {
    let dirty=false;
    const fallback=state.nations[field.id]?.annexedBy??field.id;
    for(let n=0;n<field.lookup.length;n++) {
-    const index=field.lookup[n],id=index>=0?state.occupation?.[index]?.controller??field.id:fallback,c=this.colors.get(id)??this.colors.get(field.id)!;
+    const index=field.lookup[n],id=index>=0?state.occupation?.[index]?.controller??field.id:fallback,c=resolve?resolve(index,id):this.colors.get(id)??this.colors.get(field.id)!;
     const r=Math.round(c.r*255),g=Math.round(c.g*255),b=Math.round(c.b*255),o=n*4;
     if(pixels[o]!==r||pixels[o+1]!==g||pixels[o+2]!==b||pixels[o+3]!==255){pixels[o]=r;pixels[o+1]=g;pixels[o+2]=b;pixels[o+3]=255;dirty=true;}
    }

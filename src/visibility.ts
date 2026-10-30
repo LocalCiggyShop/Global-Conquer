@@ -21,7 +21,7 @@ export class Visibility {
       this.buckets.set(key, bucket);
     };
     for (const b of this.state.buildings)
-      if (b.hp > 0) add(b.nation, b.x, b.z, b.type === "hq" ? 10 : 7);
+      if (!b.construction && b.hp > 0) add(b.nation, b.x, b.z, b.type === "hq" ? 10 : 7);
     for (const u of this.state.units)
       if (u.hp > 0 && !u.embarkedOn)
         add(u.nation, u.x, u.z, isShip(u.type) ? 12 : 8);

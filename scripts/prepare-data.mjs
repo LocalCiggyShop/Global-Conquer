@@ -55,14 +55,12 @@ const overview = await load("overview");
 const cities = await load("cities");
 const places = await load("places");
 const ports = await load("ports");
+const regionsOnly=process.argv.includes("--regions-only");
 const settings = [
-  ["europe", "Europe", [18, 53]],
-  ["asia", "Asia", [100, 38]],
-  ["africa", "Africa", [20, 2]],
-  ["north-america", "North America", [-103, 44]],
-  ["south-america", "South America", [-62, -21]],
-  ["oceania", "Oceania", [144, -24]],
-  ["antarctica", "Antarctica", [0, -85]],
+ ["europe","Europe",[18,53]],
+ ["asia-pacific","Asia & Oceania",[115,10]],
+ ["africa","Africa",[20,2]],
+ ["americas","Americas",[-85,10]],
 ];
 const round = (n) => Math.round(n * 10000) / 10000;
 function orient(feature) {
@@ -179,13 +177,15 @@ for(const port of ports){
  for(const city of places){let dx=Math.abs(city.geometry.coordinates[0]-p[0]);dx=Math.min(dx,360-dx);const dz=city.geometry.coordinates[1]-p[1],distance=dx*dx*c*c+dz*dz;if(distance<best){best=distance;nearest=city;}}
  if(nearest)portNation.set(port.properties.ne_id,nearest.properties.adm0_a3);
 }
-const counts = {};
+const counts = regionsOnly?JSON.parse(await readFile("public/data/overview.json","utf8")).counts:{};
+for(const old of ["north-america","south-america","oceania","antarctica","asia"])delete counts[old];
 for (const [id, continent, center] of settings) {
+  if(regionsOnly&&id!=="asia-pacific"&&id!=="americas")continue;
   const selected = [];
   for (const feature of countries) {
     if (feature.properties.ADM0_A3 === "RUS") {
-      if (id === "europe" || id === "asia")
-        selected.push(clipRussia(feature, id === "asia"));
+      if (id === "europe" || id === "asia-pacific")
+        selected.push(clipRussia(feature, id === "asia-pacific"));
       continue;
     }
     const polygons =
@@ -207,7 +207,7 @@ for (const [id, continent, center] of settings) {
           theatre = p[1] > 12 ? "North America" : "South America";
         else theatre = "Africa";
       }
-      return theatre === continent;
+      return theatre === continent || (id==="americas"&&["North America","South America"].includes(theatre)) || (id==="asia-pacific"&&["Asia","Oceania"].includes(theatre));
     });
     if (selectedPolygons.length)
       selected.push({
@@ -316,6 +316,7 @@ for (const [id, continent, center] of settings) {
     return [{id:String(f.properties.ne_id),name:f.properties.name,nation:country.id,city:nearby?.name??f.properties.name,x:round(p[0]),z:round(p[1])}];
   });
   const data = {
+    kmPerUnit:6371/projection.scale(),
     id,
     places: detailedPlaces,
     ports: portSites,
@@ -367,6 +368,7 @@ await writeFile(
     counts,
   }),
 );
+if(!regionsOnly){
 await sharp(".cache/earth.jpg")
   .resize(4096, 2048)
   .jpeg({ quality: 88, mozjpeg: true })
@@ -382,3 +384,5 @@ await writeFile(
 console.log("Map packages and 4K Earth texture ready.");
 
 await import("./prepare-flags.mjs");
+
+}

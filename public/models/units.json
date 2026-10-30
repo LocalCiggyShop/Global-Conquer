@@ -1,0 +1,6 @@
+[
+  {"type":"infantry","file":"infantry.glb","rotationY":3.141592653589793,"clips":{"idle":"GC_Idle","walk":"GC_Walk","fire":"GC_Fire","walkFire":"GC_WalkFire"}},
+  {"type":"armor","file":"armor.glb","recoilBone":"cannon_2","rotationY":3.141592653589793},
+  {"type":"frigate","file":"frigate.glb","rotationY":3.141592653589793},
+  {"type":"transport","file":"transport.glb","rotationY":1.5707963267948966}
+]

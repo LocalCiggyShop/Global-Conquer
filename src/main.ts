@@ -1,3 +1,13 @@
+import {TechnologyPanel} from "./technology-panel";
+import {Hotkeys} from "./hotkeys";
+import {GrowthTooltip} from "./growth-tooltip";
+import {StrategyPanel} from "./strategy-panel";
+import {unitStatus,diplomaticReason,personalities} from "./strategic-systems";
+import {personnel} from "./unit-stacks";
+import {NationPanel} from "./nation-panel";
+import {constructionPlans} from "./construction";
+import {AffairsPanel} from "./affairs-panel";
+import {relationScore,pairKey,spending} from "./relations";
 import * as THREE from "three";
 import "./style.css";
 import "./ui-theme.css";
@@ -81,7 +91,7 @@ app.innerHTML = `
   <header class="topbar">
     <a class="brand" href="/" aria-label="Global Conquer home"><span class="brand-mark">${icon("globe")}</span><span>GLOBAL<span class="brand-rts">CONQUER</span><small>A WORLD OF POSSIBILITY</small></span></a>
     <nav aria-label="Main navigation"><button id="world-nav" class="nav-button active" aria-label="World overview">${icon("globe")}<span>World</span></button><button id="help-button" class="nav-button" aria-label="How to play">${icon("info")}<span>How to play</span></button></nav>
-    <div class="session"><span class="status-dot"></span><span>LOCAL SAVE</span><span class="beta-label">Beta · v0.1.1</span></div>
+    <div class="session"><span class="status-dot"></span><span>LOCAL SAVE</span><span class="beta-label">Beta · v0.1.2</span></div>
   </header>
   <main>
     <div id="overview-ui">
@@ -108,11 +118,11 @@ app.innerHTML = `
         <p class="save-note">${icon("shield")} Progress saved on this device</p>
         <button id="retry-data" class="text-button" hidden>Retry map download</button>
       </aside>
-      <div class="overview-bottom"><div>${icon("globe")} <span>ONE PLANET. ENDLESS POSSIBILITIES.</span></div><p>Drag to orbit <span>·</span> Scroll to zoom <span>·</span> Select a continent to begin</p><span class="map-credit">EARTH · NASA / BORDERS · NATURAL EARTH</span></div>
+      <div class="overview-bottom"><div>${icon("globe")} <span>ONE PLANET. ENDLESS POSSIBILITIES.</span></div><p>Drag to orbit <span>·</span> Scroll to zoom <span>·</span> Select a continent to begin</p><span class="map-credit">EARTH · NASA / BORDERS · NATURAL EARTH · <a href="/models/README.md" target="_blank" rel="noopener">MODEL CREDITS</a></span></div>
     </div>
     <div id="play-ui" hidden>
-      <nav class="command-rail" aria-label="Game navigation"><button data-workspace="map">${icon("flag")}<span>MAP</span></button><button data-workspace="army">${icon("shield")}<span>FORCES</span></button><button data-workspace="economy">${icon("layers")}<span>ECONOMY</span></button><button data-workspace="diplomacy">${icon("globe")}<span>DIPLO</span></button><button data-workspace="intel">${icon("target")}<span>INTEL</span></button></nav>
-      <div class="resource-bar"><span class="nation-title"><img id="nation-flag" class="nation-flag" alt="National flag"><span><strong id="play-nation"></strong><small id="play-region"></small></span></span><span id="peace-status" class="peace-status">At peace</span><div class="resource" title="Treasury"><span class="resource-label">Treasury</span>${icon("diamond")}<strong id="credits">650</strong><small id="income">+3/s</small></div><div class="resource" title="Supplies"><span class="resource-label">Supply</span>${icon("supply")}<strong id="supplies">160</strong><small id="supply-income">+3/s</small></div><div class="resource" title="Army capacity"><span class="resource-label">Forces</span>${icon("units")}<strong id="army">—</strong></div><button id="leaders-button" class="diplomacy-button" aria-controls="leaders-panel" aria-expanded="false">${icon("shield")}<span>Leaders</span></button><button id="diplomacy-button" class="diplomacy-button" aria-label="Open diplomacy" aria-controls="diplomacy-panel" aria-expanded="false">${icon("flag")}<span>Diplomacy</span></button><button id="pause-button" class="square-button" title="Pause / resume (Space)" aria-label="Pause game">${icon("pause")}</button><div id="game-clock" class="game-clock" title="1 real second = 1 tick · 5 ticks = 1 day"><strong id="operation-time">Day 1</strong><small id="game-tick">Tick 1 / 5</small><div id="day-progress" role="progressbar" aria-label="Day progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span id="day-progress-fill"></span></div></div><button id="game-menu-button" class="secondary-button" aria-expanded="false">Menu</button></div><div id="game-menu" class="panel" hidden><button id="menu-world">World overview</button><button id="menu-help">How to play</button></div>
+      <nav class="command-rail" aria-label="Game navigation"><button data-workspace="map">${icon("flag")}<span>MAP</span></button><button data-workspace="army">${icon("shield")}<span>FORCES</span></button><button data-workspace="economy">${icon("layers")}<span>ECONOMY</span></button><button data-workspace="diplomacy">${icon("globe")}<span>DIPLO</span></button><button data-workspace="intel">${icon("target")}<span>INTEL</span></button><button id="affairs-button"><span>NEWS</span></button><button data-workspace="government">${icon("home")}<span>GOVERNMENT</span></button><button id="technology-button"><span>TECHNOLOGY</span></button><button id="objectives-button">${icon("flag")}<span>OBJECTIVES</span></button></nav>
+      <div class="resource-bar"><span class="nation-title"><img id="nation-flag" class="nation-flag" alt="National flag"><span><strong id="play-nation"></strong><small id="play-region"></small></span></span><span id="peace-status" class="peace-status">At peace</span><div class="resource" title="Treasury"><span class="resource-label">Treasury</span>${icon("diamond")}<strong id="credits">650</strong><small id="income">+3/s</small></div><div class="resource" title="Supplies"><span class="resource-label">Supply</span>${icon("supply")}<strong id="supplies">160</strong><small id="supply-income">+3/s</small></div><div class="resource" title="Army capacity"><span class="resource-label">Forces</span>${icon("units")}<strong id="army">—</strong></div><button id="national-stability" class="diplomacy-button" title="Stability and government">70%</button><button id="leaders-button" class="diplomacy-button" aria-controls="leaders-panel" aria-expanded="false">${icon("shield")}<span>Leaders</span></button><button id="diplomacy-button" class="diplomacy-button" aria-label="Open diplomacy" aria-controls="diplomacy-panel" aria-expanded="false">${icon("flag")}<span>Diplomacy</span></button><button id="pause-button" class="square-button" title="Pause / resume" aria-label="Pause game">${icon("pause")}</button><div id="game-clock" class="game-clock" title="1 real second = 1 tick · 5 ticks = 1 day"><strong id="operation-time">Day 1</strong><small id="game-tick">Tick 1 / 5</small><div id="day-progress" role="progressbar" aria-label="Day progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span id="day-progress-fill"></span></div></div><button id="game-menu-button" class="secondary-button" aria-expanded="false">Menu</button></div><div id="game-menu" class="panel" hidden><button id="menu-world">World overview</button><button id="menu-help">How to play</button><button id="menu-settings">Settings & hotkeys</button></div>
       <aside class="command-panel panel">
         <div id="nation-flag-overlay" aria-hidden="true"></div><div class="panel-heading"><h2>Your nation</h2><button id="manage-close" class="icon-button" aria-label="Close nation panel">${icon("close")}</button></div>
         <div class="management-tabs" role="tablist" aria-label="Nation management"><button id="economy-tab" role="tab" data-panel-tab="economy" aria-controls="economy-controls" aria-selected="true" class="active">${icon("layers")} Economy</button><button id="army-tab" role="tab" data-panel-tab="army" aria-controls="army-controls" aria-selected="false">${icon("units")} Army</button></div><section id="economy-controls" role="tabpanel" aria-labelledby="economy-tab"><div class="base-status"><span>Headquarters</span><strong id="hq-health">100%</strong><div class="health-track"><span id="hq-health-bar"></span></div></div>
@@ -138,7 +148,7 @@ app.innerHTML = `
             "",
           )}</select><p id="doctrine-note"></p><small id="doctrine-lock">Change during peace · 60s cooldown</small></div></section>
       </aside>
-      <aside class="tactical-panel panel"><div class="eyebrow">MAP<button id="frame-button" class="icon-button" title="Frame continent" aria-label="Frame continent">${icon("expand")}</button></div><canvas id="minimap" width="440" height="280" aria-label="Tactical map. Click to move camera."></canvas><div class="map-legend"><span><i class="friendly-dot"></i>You</span><span><i class="neutral-dot"></i>Neutral</span><span><i class="hostile-dot"></i>At war</span></div><button id="focus-button" class="secondary-button">${icon("home")} Headquarters <kbd>F</kbd></button></aside>
+      <div class="map-mode-bar" role="group" aria-label="Map modes"><button data-map-mode="political" class="active">Political</button><button data-map-mode="military">Military</button><button data-map-mode="supply">Supply</button><button data-map-mode="resources">Resources</button><span id="map-mode-legend">National colours</span></div><aside class="tactical-panel panel"><div class="eyebrow">MAP<button id="frame-button" class="icon-button" title="Frame continent" aria-label="Frame continent">${icon("expand")}</button></div><canvas id="minimap" width="440" height="280" aria-label="Tactical map. Click to move camera."></canvas><div class="map-legend"><span><i class="friendly-dot"></i>You</span><span><i class="neutral-dot"></i>Neutral</span><span><i class="hostile-dot"></i>At war</span></div><button id="focus-button" class="secondary-button">${icon("home")} Headquarters <kbd>F</kbd></button></aside>
       <aside id="diplomacy-panel" class="diplomacy-panel panel" aria-label="Diplomacy" hidden>
         <div class="diplomacy-header"><div class="panel-heading"><h2>${icon("globe")} Diplomacy <small>Foreign relations</small></h2><button id="diplomacy-close" class="icon-button" aria-label="Close diplomacy">${icon("close")}</button></div><div class="diplomacy-tabs" role="group" aria-label="Diplomacy view"><button data-diplomacy-tab="nations" class="active">Nations & intel</button><button data-diplomacy-tab="rankings">Rankings</button></div></div>
         <div id="diplomacy-sidebar" class="diplomacy-sidebar"><label class="sr-only" for="nation-search">Search nations</label><input id="nation-search" type="search" placeholder="Search nations…" autocomplete="off"><select id="nation-filter" aria-label="Filter nations"><option value="all">All nations</option><option value="neighbors">Neighbours</option><option value="allies">Allies</option><option value="enemies">At war</option></select><div id="nation-list" class="nation-list"></div></div>
@@ -152,8 +162,8 @@ app.innerHTML = `
         <button id="create-leader" class="secondary-button">Appoint general</button><section id="leader-details" class="leader-details"></section>
       </aside>
       <button id="manage-button" class="secondary-button">${icon("home")} Manage nation</button>
-      <div class="selected-panel panel"><div class="selected-symbol">${icon("units")}</div><div class="selected-copy"><strong id="selection-title">Your command awaits</strong><span id="selection-note">Click a squad or drag to select units</span></div><button id="select-all-button" class="secondary-button">Select all <kbd>Q</kbd></button><button id="assign-leader-button" class="secondary-button" title="Assign selected units to a military leader">Leader</button><button id="move-button" class="secondary-button primary-command" title="Move selected units" aria-label="Move selected units">${icon("target")} Move</button><button id="frontline-button" class="secondary-button" title="Assign selected infantry to a land border">Frontline</button><button id="embark-button" class="secondary-button" title="Embark ground troops onto a nearby friendly transport" aria-label="Embark selected troops">${icon("anchor")} Board</button><button id="land-button" class="secondary-button" title="Disembark selected transports onto nearby land" aria-label="Disembark troops">${icon("flag")} Land</button><button id="stop-button" class="square-button" title="Stop selected units (X)" aria-label="Stop selected units">${icon("stop")}</button></div>
-      <div class="play-footer"><span id="save-status">${icon("shield")} Autosave enabled <small class="beta-label">Beta · v0.1.1</small></span><p><button id="return-world-button" class="text-button">${icon("globe")} World</button><button id="play-help-button" class="text-button">${icon("info")} Help</button><span>·</span> Right-click to move <span>·</span> WASD / middle-drag to pan</p><span id="country-hover">OPEN OCEAN</span></div>
+      <div class="selected-panel panel"><div class="selected-symbol">${icon("units")}</div><div class="selected-copy"><strong id="selection-title">Your command awaits</strong><span id="selection-note">Click a squad or drag to select units</span></div><button id="select-all-button" class="secondary-button">Select all <kbd>Q</kbd></button><button id="assign-leader-button" class="secondary-button" title="Assign selected units to a military leader">Leader</button><button id="move-button" class="secondary-button primary-command" title="Move selected units" aria-label="Move selected units">${icon("target")} Move</button><button id="merge-button" class="secondary-button">Merge <kbd>G</kbd></button><button id="split-button" class="secondary-button">Split <kbd>V</kbd></button><button id="inspect-button" class="secondary-button">Inspect</button><button id="attack-move-button" class="secondary-button">Attack move <kbd>J</kbd></button><button id="hold-button" class="secondary-button">Hold <kbd>H</kbd></button><button id="fallback-button" class="secondary-button">Fallback line</button><button id="frontline-button" class="secondary-button" title="Assign selected infantry to a land border">Frontline</button><button id="embark-button" class="secondary-button" title="Embark ground troops onto a nearby friendly transport" aria-label="Embark selected troops">${icon("anchor")} Board</button><button id="land-button" class="secondary-button" title="Disembark selected transports onto nearby land" aria-label="Disembark troops">${icon("flag")} Land</button><button id="stop-button" class="square-button" title="Stop selected units" aria-label="Stop selected units">${icon("stop")}</button></div>
+      <div class="play-footer"><span id="save-status">${icon("shield")} Autosave enabled <small class="beta-label">Beta · v0.1.2</small></span><p><button id="return-world-button" class="text-button">${icon("globe")} World</button><button id="play-help-button" class="text-button">${icon("info")} Help</button><span>·</span> Right-click to move <span>·</span> WASD / middle-drag to pan</p><span id="country-hover">OPEN OCEAN</span></div>
       <div id="paused-banner" hidden>Paused <span>Space to resume</span></div>
       <div id="build-banner" hidden></div>
       <div id="event-feed" aria-live="polite"></div>
@@ -175,6 +185,13 @@ let paths: PathClient | null = null;
 let focusedRegion = "europe";
 let data: ContinentData | null = null;
 let grid: Grid | null = null;
+$("#nation-flag").setAttribute("role","button");$("#nation-flag").setAttribute("tabindex","0");$("#nation-flag").setAttribute("aria-label","Government and formables");
+const nationPanel=new NationPanel($("#play-ui"),()=>simulation,message=>toast(message));
+const affairsPanel=new AffairsPanel($("#play-ui"),message=>toast(message),()=>{if(simulation)saveCampaign(simulation.state);},nation=>{const c=simulation?.data.countries.find(c=>c.id===nation);if(c)play?.panTo((c.bounds[0]+c.bounds[2])/2,(c.bounds[1]+c.bounds[3])/2);});
+$("#affairs-button").addEventListener("click",()=>affairsPanel.toggle());
+$("#national-stability").addEventListener("click",()=>{if(simulation)nationPanel.open(simulation.state.nation);});
+app.addEventListener("click",event=>{const flag=(event.target as HTMLElement).closest<HTMLElement>("#nation-flag,[data-government]");if(!flag||!simulation||mode!=="play")return;event.stopPropagation();nationPanel.open(flag.dataset.government??simulation.state.nation);},true);
+app.addEventListener("keydown",event=>{if(event.key!=="Enter"&&event.key!==" ")return;const flag=(event.target as HTMLElement).closest<HTMLElement>("#nation-flag,[data-government]");if(flag&&simulation){event.preventDefault();nationPanel.open(flag.dataset.government??simulation.state.nation);}});
 let mode: "overview" | "play" | "transition" | "countdown" = "overview";
 let countdownDeadline = 0;
 let deploymentTimings:Record<string,number>={};
@@ -187,6 +204,9 @@ let abortData: AbortController | null = null;
 let placement: Exclude<Building["type"], "hq"> | null = null;
 let moveMode = false;
 let frontlineMode = false;
+let tacticalMode:"move"|"attackMove"|"fallback"="move";
+let fallbackStart:Point|null=null;
+let rallyBuilding:number|null=null;
 let uiTimer = 0,
   previousTime = 0,
   resultShown = false;
@@ -204,6 +224,25 @@ const nationSelect = $<HTMLSelectElement>("#nation-select");
 const deployButton = $<HTMLButtonElement>("#deploy-button");
 const minimap = $<HTMLCanvasElement>("#minimap");
 const economyPanel=new EconomyPanel($("#play-ui"),()=>simulation,()=>play,()=>beginPlacement("factory"),toast);
+economyPanel.attachFinance(affairsPanel.finance);
+const hotkeys=new Hotkeys($("#play-ui"),toast);
+new GrowthTooltip($("#play-ui"));
+const strategyPanel=new StrategyPanel($("#play-ui"),()=>simulation,()=>play,toast,id=>{cancelCommand();rallyBuilding=id;toast("Click a rally point on the map.");});
+// Every inspector occupies the same dock; opening one hides the others.
+const technologyPanel=new TechnologyPanel($("#play-ui"),()=>simulation,toast);
+$("#technology-button").addEventListener("click",()=>technologyPanel.open());
+const dockPanels=[technologyPanel.element,economyPanel.element,nationPanel.element,strategyPanel.element,$("#diplomacy-panel"),$("#leaders-panel"),$(".affairs-panel")];
+const dockObserver=new MutationObserver(records=>{const opened=records.filter(r=>r.attributeName==="hidden"&&!(r.target as HTMLElement).hidden).at(-1)?.target as HTMLElement|undefined;if(!opened)return;for(const panel of dockPanels)if(panel!==opened)panel.hidden=true;$(".command-panel").classList.add("workspace-hidden");});
+for(const panel of dockPanels)dockObserver.observe(panel,{attributes:true,attributeFilter:["hidden"]});
+$("#objectives-button").addEventListener("click",()=>strategyPanel.objectives());
+for(const button of document.querySelectorAll<HTMLButtonElement>("[data-map-mode]"))button.addEventListener("click",()=>{if(!play)return;const mode=button.dataset.mapMode as "political"|"military"|"supply"|"resources";play.setMapMode(mode);for(const b of document.querySelectorAll("[data-map-mode]"))b.classList.toggle("active",b===button);$("#map-mode-legend").textContent={political:"National colours",military:"Teal: you · Blue: allies · Coral: enemies",supply:"Teal: connected · Amber: stretched · Coral: isolated",resources:"Deposit colours · stockpiles stay in Economy"}[mode];});
+$("#economy-invest").addEventListener("click",()=>submit({kind:"invest"}));
+$("#merge-button").addEventListener("click",()=>{if(play)submit({kind:"mergeUnits",ids:[...play.selected]});});
+$("#split-button").addEventListener("click",()=>{if(play)submit({kind:"splitUnits",ids:[...play.selected]});});
+$("#inspect-button").addEventListener("click",()=>strategyPanel.inspect());
+$("#attack-move-button").addEventListener("click",()=>{cancelCommand();moveMode=true;tacticalMode="attackMove";toast("Click a destination to advance and engage visible enemies. Shift queues a waypoint.");});
+$("#hold-button").addEventListener("click",()=>{if(play)submit({kind:"tactical",ids:[...play.selected],mode:"hold"});});
+$("#fallback-button").addEventListener("click",()=>{cancelCommand();moveMode=true;tacticalMode="fallback";toast("Click the two ends of your fallback line.");});
 
 function toast(message: string) {
   clearTimeout(toastTimer);
@@ -330,6 +369,7 @@ function startWorker(sim: Simulation) {
   sim.onObstacles = (walkable) => activeWorker.postMessage({type:"obstacles",walkable,obstaclesRevision:sim.obstacleRevision});
   sim.onAccess = (patch) => activeWorker.postMessage(patch?{type:"access-patch",...patch}:{type:"access",...sim.accessSnapshot()});
   sim.requestPath = (unit,target) => client.request(unit,target);
+  sim.requestTrafficPath=(unit,target,cells)=>client.request(unit,target,cells);
   worker.onmessage = (event) => { if(simulation===sim)client.receive(event.data); };
   for(const u of sim.state.units)if(u.hp>0&&!u.embarkedOn&&u.destination&&!u.path.length)client.request(u,u.destination);
   worker.onerror = () => {
@@ -371,9 +411,12 @@ async function enterPlay(reset = false) {
     simulation.onCommandError=toast;
     startWorker(simulation);
     await new Promise<void>((resolve)=>requestAnimationFrame(()=>resolve()));
-    play=new PlayView(canvas,localData,localGrid,simulation,prepared);
+    play=new PlayView(canvas,simulation.data,localGrid,simulation,prepared);
+    for(const b of document.querySelectorAll<HTMLElement>("[data-map-mode]"))b.classList.toggle("active",b.dataset.mapMode==="political");$("#map-mode-legend").textContent="National colours";
     await play.finishLabels(prepared.labels,(fraction)=>deploymentProgress(80+fraction*8,"Drawing country labels"));
-    resize();deploymentProgress(91,"Preparing graphics");
+    resize();deploymentProgress(91,"Loading unit models");
+    await play.prepareUnitGraphics(renderer);
+    deploymentProgress(94,"Preparing graphics");
     await renderer.compileAsync(play.scene,play.camera);
     deploymentProgress(98,"Finishing map upload");
     play.update(0);renderer.render(play.scene,play.camera);
@@ -469,7 +512,7 @@ function returnToOverview() {
 function cancelCommand() {
   placement = null;
   moveMode = false;
-  frontlineMode = false;
+  frontlineMode = false;tacticalMode="move";fallbackStart=null;rallyBuilding=null;
   $("#frontline-button").classList.remove("active");
   play?.showGhost(null);
   canvas.classList.remove("placing");
@@ -478,9 +521,14 @@ function cancelCommand() {
   for (const b of document.querySelectorAll("[data-build]"))
     b.classList.remove("active");
 }
-function issueMove(point: Point) {
+function issueMove(point: Point,append=false) {
   if (!simulation || !play) return;
-  const error = simulation.move([...play.selected], point);
+  if(rallyBuilding!==null){submit({kind:"rally",id:rallyBuilding,target:point});play.showOrder(point);cancelCommand();return;}
+  if(tacticalMode==="fallback"){
+    if(!fallbackStart){fallbackStart=point;toast("Choose the other end of the fallback line.");return;}
+    const ids=[...play.selected];submit({kind:"fallbackLine",ids,start:fallbackStart,end:point});cancelCommand();return;
+  }
+  const error = simulation.enqueue({kind:"tactical",ids:[...play.selected],target:point,mode:tacticalMode,append});
   if (error) toast(error);
   else { play.showOrder(point); if(simulation.paused)toast("Move order queued. Resume with Space to move."); }
   cancelCommand();
@@ -501,20 +549,26 @@ function updateClockUI(){
   $("#game-clock").title=`1 real second = 1 tick · 5 ticks = 1 day${paused?" · Paused":""} · ${state.pendingCommands?.length??0} queued orders`;
 }
 function updatePlayUI() {
+  if(simulation){affairsPanel.update(simulation);nationPanel.update();strategyPanel.update();technologyPanel.update();}
   if (!simulation || !play) return;
+  for(const id of simulation.expandSelection(play.selected))play.selected.add(id);
   const s = simulation.state,
     n = simulation.playerNation;
+  $("#play-nation").textContent=simulation.nationName(s.nation);
+  $("#national-stability").textContent=`${n.stability!.toFixed(0)}%`;
+  $("#national-stability").title=`Stability · ${n.politicalPower!.toFixed(1)} political power · click flag for government`;
   $("#credits").textContent = Math.floor(n.credits).toLocaleString();
   $("#supplies").textContent = Math.floor(n.supplies).toLocaleString();
-  $("#supply-income").textContent = `+${simulation.supplyIncome(s.nation).toFixed(1)}/s`;
-  $("#income").textContent = `+${simulation.income}/s`;
+  $("#supply-income").textContent = `${(simulation.supplyIncome(s.nation)-simulation.supplyUpkeep(s.nation)).toFixed(1)}/tick`;
+  $("#income").textContent = `${simulation.income>=0?"+":""}${simulation.income.toFixed(1)}/tick`;
   $("#army").textContent = `${simulation.nationArmy(s.nation)} / ${simulation.nationCapacity(s.nation)}`;
-  $("#panel-army").textContent = $("#army").textContent;
+  $("#army").title=`${simulation.nationPersonnel(s.nation).toLocaleString()} personnel · 1,000 per full formation · maximum 5 formations per stack`;
+  $("#panel-army").textContent = $("#army").textContent+` · ${simulation.nationPersonnel(s.nation).toLocaleString()} personnel`;
   $("#capacity-warning").hidden = simulation.nationArmy(s.nation) < simulation.nationCapacity(s.nation);
   $("#army").parentElement!.title = `Force capacity: ${simulation.territory.population(s.nation).toLocaleString()} controlled population · 6 base + 1 per 2 million (maximum 240)`;
   updateClockUI();
   $("#paused-banner").hidden = !simulation.paused || manual.open;
-  $("#pause-button").innerHTML = icon(simulation.paused ? "play" : "pause");
+  const pauseButton=$("#pause-button");if(pauseButton.dataset.paused!==String(simulation.paused)){pauseButton.dataset.paused=String(simulation.paused);const glyph=pauseButton.querySelector(".icon");if(glyph)glyph.outerHTML=icon(simulation.paused?"play":"pause");}
   $("#pause-button").setAttribute(
     "aria-label",
     simulation.paused ? "Resume game" : "Pause game",
@@ -527,10 +581,10 @@ function updatePlayUI() {
     play!.selected.has(u.id),
   );
   $("#selection-title").textContent = selected.length
-    ? `${selected.length} ${selected.length === 1 ? "unit" : "units"} selected`
+    ? `${selected.length} ${selected.length === 1 ? "formation" : "formations"} · ${selected.reduce((sum,u)=>sum+personnel(u),0).toLocaleString()} personnel`
     : "Your command awaits";
   $("#selection-note").textContent = selected.length
-    ? "Right-click to move · Manual orders override frontlines"
+    ? "Right-click to move · Shift queues waypoints · Inspect for details"
     : "Select troops or ships · Q selects all";
   const assigned = selected.filter((u) => simulation!.command.forUnit(u));
   if (selected.length && assigned.length === selected.length) {
@@ -547,6 +601,8 @@ function updatePlayUI() {
   if (cargo)
     $("#selection-note").textContent =
       `${cargo} troops aboard · Right-click a coast to land`;
+  if(selected.length){const statuses=new Set(selected.map(u=>unitStatus(u,s.elapsed,simulation!.unitSupply(u))));$("#selection-note").textContent=[...statuses].join(" · ");}
+  if(selected.length)$("#selection-note").textContent+=` · ${Math.min(...selected.map(u=>simulation!.unitSpeedKmh(u))).toFixed(1)} km/h slowest unit`;
   const factories = productionBuildings(s, s.nation),
     factoryIds = new Set(factories.map((b) => b.id));
   const rate = productionRate(s, s.nation, simulation.income),
@@ -597,8 +653,10 @@ function updatePlayUI() {
         ? "barracks"
         : "HQ/barracks";
     button.dataset.available=String(slots>0);
+    const price=spending(n);
+    button.querySelector(".cost")!.innerHTML=`${Math.ceil(unitSpecs[type].credits*price)} <small>${Math.ceil(unitSpecs[type].supplies*price)} army supply</small>`;
     button.querySelector("small")!.textContent = slots
-      ? `${type === "transport" ? "6 troop spaces · " : ""}${slots} ${role}${slots > 1 && role === "dock" ? "s" : ""} · ${seconds} ticks each`
+      ? `${type === "transport" ? "6 troop spaces · " : ""}${slots} ${role}${slots > 1 && role === "dock" ? "s" : ""} · ${seconds} ticks · ${simulation.unitSpeedKmh({type,hp:1,maxHp:1,nation:s.nation} as Unit).toFixed(1)} km/h`
       : isShip(type)&&data?.ports ? "Control an operational real port first" : `Build ${isShip(type) ? "a coastal dock" : type === "armor" ? "a barracks" : "an HQ or barracks"} first`;
   }
   play.drawMinimap(minimap);
@@ -648,12 +706,12 @@ const escapeHtml = (value: string) =>
       ]!,
   );
 function countryFlag(country:ContinentData["countries"][number]):string {
-  return country.flagCode ? `<img class="country-flag" src="/flags/${country.flagCode.toLowerCase()}.svg" alt="">` : `<span class="country-initial">${escapeHtml(country.id.slice(0,2))}</span>`;
+  return country.flagCode ? `<img class="country-flag" data-government="${country.id}" role="button" tabindex="0" aria-label="Government and formables for ${escapeHtml(country.name)}" src="/flags/${country.flagCode.toLowerCase()}.svg" alt="">` : `<span class="country-initial">${escapeHtml(country.id.slice(0,2))}</span>`;
 }
 function renderDiplomacy() {
-  if (!simulation || !data) return;
+  if (!simulation) return;
   const sim = simulation,
-    state = sim.state;
+    state = sim.state, data=sim.data;
   if (!$("#rankings-panel").hidden) renderRankings();
   const query = $<HTMLInputElement>("#nation-search")
     .value.trim()
@@ -704,17 +762,19 @@ function renderDiplomacy() {
   const details = $("#nation-details"),
     atWar = sim.atWar(state.nation, nation.id);
   const isAlly = sim.allied(state.nation, nation.id);
-  const detailKey = nation.id + atWar + nation.defeated + isAlly + nation.annexedBy;
+  const detailKey = nation.id + atWar + nation.defeated + isAlly + nation.annexedBy + nation.formedNation;
   if (details.dataset.key !== detailKey) {
     details.dataset.key = detailKey;
-    details.innerHTML = `<div class="nation-detail-heading detail-card"><div class="selected-nation">${countryFlag(country)}<span><h3>${escapeHtml(country.name)}</h3><small>${nation.id===state.nation ? "Your nation" : neighbors.has(nation.id) ? "Neighbour" : "Continent nation"} · ${escapeHtml(getRegion(focusedRegion).name)}</small></span></div><span class="relation-label ${atWar ? "war" : ""}">${icon(atWar?"shield":"globe")} ${relation(nation.id)}</span></div>
+    details.innerHTML = `<div class="nation-detail-heading detail-card"><div class="selected-nation">${countryFlag(country)}<span><h3>${escapeHtml(sim.nationName(nation.id))}</h3><small>${nation.id===state.nation ? "Your nation" : neighbors.has(nation.id) ? "Neighbour" : "Continent nation"} · ${escapeHtml(getRegion(focusedRegion).name)}</small></span></div><span class="relation-label ${atWar ? "war" : ""}">${icon(atWar?"shield":"globe")} ${relation(nation.id)}</span></div>
     <div class="nation-metrics detail-card"><div><small>${icon("diamond")} Treasury</small><strong id="foreign-credits"></strong></div><div><small>${icon("layers")} Income</small><strong id="foreign-income"></strong></div><div><small>${icon("units")} Army</small><strong id="foreign-army"></strong><span id="foreign-army-note"></span></div><div><small>${icon("home")} Infrastructure</small><strong id="foreign-industry"></strong></div></div>
     <div class="nation-facts detail-card"><div>${icon("home")}<span><small>Capital</small><strong id="foreign-capital"></strong></span></div><div>${icon("layers")}<span><small>Cities held</small><strong id="foreign-city-control"></strong></span></div><div>${icon("units")}<span><small>Force capacity</small><strong id="foreign-capacity"></strong></span></div><div>${icon("units")}<span><small>Population</small><strong id="foreign-population"></strong></span></div></div>
+    <div class="detail-card"><p id="foreign-relations"></p><p id="foreign-market"></p><p id="foreign-personality"></p><p id="foreign-reason"></p>${nation.id!==state.nation?'<button id="embassy-button" class="secondary-button">Establish mutual embassy · 150</button>':''}</div>
     <p id="foreign-doctrine" class="foreign-doctrine detail-card"></p>
     <div class="intelligence-actions detail-card"><h4>${icon("target")} Intelligence</h4><p id="intel-status"></p><div class="intel-buttons">${nation.id !== state.nation ? `<button id="recon-button" class="secondary-button">${icon("target")} Recon <span class="cost">120</span></button><button id="network-button" class="secondary-button">${icon("shield")} Spy network <span class="cost">250</span></button>` : ""}<button id="counter-button" class="secondary-button">${icon("shield")} <span id="counter-label">Counterintelligence · 150</span></button></div></div>
     <details class="diplomacy-explainer detail-card"><summary>${icon("flag")} Land access & alliances ${icon("chevron")}</summary><p>Land access requires ownership, declared war, or an alliance. Alliances grant mutual access without automatically joining wars.${nation.capital ? "" : " This small territory develops through its economy and strategic reserves."}</p></details>
     <details class="diplomacy-explainer detail-card"><summary>${icon("home")} Capitulation rules ${icon("chevron")}</summary><p>${nation.annexedBy ? "Annexed by " + escapeHtml(sim.nationName(nation.annexedBy)) + "." : "Losing the capital and more than half of a nation’s cities forces capitulation."}</p></details>
     <div class="diplomacy-actions">${nation.id !== state.nation && !nation.defeated ? `${!atWar ? `<button id="alliance-action" class="peace-button">${icon("flag")} ${isAlly ? "End alliance" : "Form alliance"}</button>` : ""}` : ""}<button id="view-nation" class="secondary-button">${icon("target")} View nation</button>${nation.id !== state.nation && !nation.defeated && !isAlly ? `<button id="war-action" class="${atWar ? "peace-button" : "war-button"}">${icon("shield")} ${atWar ? "Make peace" : "Declare war"}</button>` : ""}</div>`;
+    $("#embassy-button")?.addEventListener("click",()=>{const error=sim.enqueue({kind:"embassy",target:nation.id});if(error)toast(error);else toast("Embassy agreement queued for next tick.");});
     for (const [selector, kind] of [
       ["#recon-button", "recon"],
       ["#network-button", "network"],
@@ -743,7 +803,8 @@ function renderDiplomacy() {
       renderDiplomacy(); updatePlayUI();
     });
     $("#war-action")?.addEventListener("click", () => {
-      const error = sim.enqueue({kind:sim.atWar(state.nation,nation.id)?"peace":"war",target:nation.id});
+      if(sim.atWar(state.nation,nation.id)){strategyPanel.peace(nation.id);return;}
+      const error = sim.enqueue({kind:"war",target:nation.id});
       if (error) toast(error);
       renderDiplomacy();
       updatePlayUI();
@@ -757,12 +818,15 @@ function renderDiplomacy() {
       if (innerWidth <= 800) closeDiplomacy();
     });
   }
+  $("#foreign-personality").textContent=`Leadership: ${personalities[nation.personality??"builder"].name}`;$("#foreign-reason").textContent=diplomaticReason(state,state.nation,nation.id);
+  $("#foreign-relations").textContent=`Relations: ${Math.round(relationScore(state,state.nation,nation.id))} · Alliance needs +20 · Trade needs −10`;
+  $("#foreign-market").textContent=`Stock index: ${(nation.stockIndex??100).toFixed(2)} · ${state.affairs?.embassies.includes(pairKey(state.nation,nation.id))?"Mutual embassy: +2 credits each/day, improving relations":"No embassy"}`;
   $("#foreign-credits").textContent = Math.floor(
     nation.credits,
   ).toLocaleString();
   $("#foreign-income").textContent = nation.defeated
     ? "—"
-    : `+${sim.nationIncome(nation.id)}/s`;
+    : `${sim.nationIncome(nation.id)>=0?"+":""}${sim.nationIncome(nation.id).toFixed(1)}/tick`;
   const cities = (state.cities ?? []).filter((c) => c.nation === nation.id),
     capital = cities.find((c) => c.capital);
   $("#foreign-city-control").textContent = `${cities.filter((c) => c.controller === nation.id).length} / ${cities.length}`;
@@ -810,7 +874,7 @@ function renderRankings() {
   if (!simulation || !data) return;
   const metric = $<HTMLSelectElement>("#ranking-sort").value as
     "score" | "military" | "economy" | "resources";
-  const entries = countryRankings(simulation.state, data).sort(
+  const entries = countryRankings(simulation.state, simulation.data).sort(
     (a, b) => b[metric] - a[metric] || a.name.localeCompare(b.name),
   );
   $("#ranking-table").innerHTML =
@@ -928,7 +992,7 @@ function showHelp() {
   priorPause = simulation?.paused ?? false;
   if (simulation) simulation.paused = true;
   $("#dialog-content").innerHTML =
-    `<div class="eyebrow">HOW TO PLAY</div><h2>Your nation. Your decisions.</h2><p class="dialog-intro">After a five-second countdown, every nation starts at peace. One real second advances one game tick; five ticks make a day. Orders execute on ticks, and the top bar shows the day’s progress. Build your economy before choosing a conflict.</p><div class="manual-grid"><div>${icon("diamond")}<strong>Build wealth</strong><p>Upgrade infrastructure for +2 credits/s per level. Extractors at coloured mineral deposits add +7 credits/s and collect iron, coal, copper, zinc, gold, or diamonds. Factories turn minerals into steel, electronics, consumer goods, or army supplies. Open Industry & trade to choose recipes, manage stockpiles, and import/export goods. Trade once on the next tick or schedule recurring deliveries every five days (25 ticks). Domestic consumer sales earn credits; direct trade is limited to peaceful nations. All AI nations develop their own economies and keep a treasury reserve. Productive income and infrastructure also speed up unit training. Supplies start at 3/s, plus 0.5/s per infrastructure level, 1/s per extractor, and a city bonus.</p></div><div>${icon("flag")}<strong>Choose peace or war</strong><p>Open Diplomacy, select a nation, and choose Declare war to enable combat. Make peace ends combat on the next tick. Neutral armies never attack each other. AI leaders consider war only when funded, militarily stronger, and able to reach the target. Diplomacy also offers reconnaissance, spy networks, counterintelligence, and public country rankings.</p></div><div>${icon("shield")}<strong>Set a military doctrine</strong><p>Balanced has no modifiers. Defensive reduces damage taken by 20% but is 15% slower. Maneuver is 30% faster but deals 15% less damage. Firepower deals 25% more damage but is 15% slower. Change doctrines during peace, with a 60-second cooldown.</p></div><div>${icon("units")}<strong>Command your army</strong><p>Click or drag to select. Right-click to move troops on land or ships on ocean. Each HQ, barracks, or port trains one matching unit at a time. Add barracks for parallel army production; control more real ports for parallel naval production. Open Ports to locate or repair your harbours. Board nearby transports, then right-click a coast to sail and land. Choose Frontline with infantry selected, then click a border to spread squads along your side. Move and Stop cancel a frontline. Leaders opens separate generals and admirals; select units and assign a leader, with mixed selections using the majority branch (ties: army). Leader stats include combat bonuses and an editable frontline colour. Only declared enemies fight. Foreign units and buildings stay hidden until your units, buildings, or intelligence reveal them.</p></div></div><div class="keyboard-guide"><span><kbd>WASD</kbd> Pan</span><span><kbd>Q</kbd> Select all</span><span><kbd>X</kbd> Stop</span><span><kbd>F</kbd> Headquarters</span><span><kbd>Space</kbd> Pause</span><span><kbd>Esc</kbd> Cancel</span></div><p class="manual-note">Only the active continent simulates. Returning to the world saves and pauses it. Very small territories develop through economic statistics and army reserves when a full capital does not fit. Use docks to train frigates and transports. Move ground troops near a friendly transport and choose Board. Right-click an enemy coast with a loaded transport to sail and land. Ground troops must physically occupy an enemy strategic state for one uncontested occupation tick (one second) to capture it. Adjacent states stay with their owners. Capturing a capital and more than half the country’s cities forces capitulation and annexation. Ships control sea zones and transport troops to accessible coasts. Neutral borders are closed; form an alliance for mutual military access. Alliances do not automatically join wars. Wars, alliances, frontlines, state control, doctrines, and economies are saved.</p>${simulation ? '<button id="restart-button" class="secondary-button">Restart this continent</button>' : ""}`;
+    `<div class="eyebrow">HOW TO PLAY</div><h2>Your nation. Your decisions.</h2><p class="dialog-intro">After a five-second countdown, every nation starts at peace. One real second advances one game tick; five ticks make a day. Orders execute on ticks, and the top bar shows the day’s progress. Build your economy before choosing a conflict.</p><div class="manual-grid"><div>${icon("diamond")}<strong>Build wealth</strong><p>Upgrade infrastructure for +2 credits/s per level. Extractors at coloured mineral deposits add +7 credits/s and collect iron, coal, copper, zinc, gold, or diamonds. Factories turn minerals into steel, electronics, consumer goods, or army supplies. Open Industry & trade to choose recipes, manage stockpiles, and import/export goods. Trade once on the next tick or schedule recurring deliveries every five days (25 ticks). Domestic consumer sales earn credits; direct trade is limited to peaceful nations. All AI nations develop their own economies and keep a treasury reserve. Productive income and infrastructure also speed up unit training. Supplies start at 3/s, plus 0.5/s per infrastructure level, 1/s per extractor, and a city bonus.</p></div><div>${icon("flag")}<strong>Choose peace or war</strong><p>Open Diplomacy, select a nation, and choose Declare war to enable combat. Peace proposals end combat on the next tick if their terms are accepted. Neutral armies never attack each other. AI leaders consider war only when funded, militarily stronger, and able to reach the target. Diplomacy also offers reconnaissance, spy networks, counterintelligence, and public country rankings.</p></div><div>${icon("shield")}<strong>Set a military doctrine</strong><p>Balanced has no modifiers. Defensive reduces damage taken by 20% but is 15% slower. Maneuver is 30% faster but deals 15% less damage. Firepower deals 25% more damage but is 15% slower. Change doctrines during peace, with a 60-second cooldown.</p></div><div>${icon("units")}<strong>Command your army</strong><p>Click or drag to select. Right-click to move troops on land or ships on ocean. Each HQ, barracks, or port trains one matching unit at a time. Add barracks for parallel army production; control more real ports for parallel naval production. Open Ports to locate or repair your harbours. Board nearby transports, then right-click a coast to sail and land. Choose Frontline with infantry selected, then click a border to spread squads along your side. Move and Stop cancel a frontline. Leaders opens separate generals and admirals; select units and assign a leader, with mixed selections using the majority branch (ties: army). Leader stats include combat bonuses and an editable frontline colour. Only declared enemies fight. Foreign units and buildings stay hidden until your units, buildings, or intelligence reveal them.</p></div></div><div class="keyboard-guide"><span><kbd>WASD</kbd> Pan</span><span><kbd>Q</kbd> Select all</span><span><kbd>X</kbd> Stop</span><span><kbd>J</kbd> Attack move</span><span><kbd>H</kbd> Hold</span><span><kbd>V</kbd> Split stack</span><span>Menu → Settings to change shortcuts</span><span><kbd>Shift + right-click</kbd> Queue waypoint</span><span><kbd>Ctrl + 1–9</kbd> Save group</span><span><kbd>1–9</kbd> Recall group</span><span><kbd>F</kbd> Headquarters</span><span><kbd>Space</kbd> Pause</span><span><kbd>Esc</kbd> Cancel</span></div><p class="manual-note">Inspect selected stacks to see formation strength, organization, supply and orders. Attack-move engages visible enemies along the route; Hold and Fallback return fire only. Click two endpoints to assign a fallback line. Select a production building to set a rally point. Capitals, depots, barracks and ports support supply routes; isolated troops move and fight less effectively and cannot replace casualties. Organization below 15% causes retreat. Peace proposals can retain occupied states, request reparations and demilitarization, with a 30-day truce. Government shows resistance and reinforcement reserves. Objectives can be completed without ending your campaign.</p><p class="manual-note">Only the active continent simulates. Returning to the world saves and pauses it. Very small territories develop through economic statistics and army reserves when a full capital does not fit. Use docks to train frigates and transports. Move ground troops near a friendly transport and choose Board. Right-click an enemy coast with a loaded transport to sail and land. Ground troops must physically occupy an enemy strategic state for 10 stationary, uncontested ticks (15 in city states) to capture it. Adjacent states stay with their owners. Capturing a capital and more than half the country’s cities forces capitulation and annexation. Ships control sea zones and transport troops to accessible coasts. Neutral borders are closed; form an alliance for mutual military access. Alliances do not automatically join wars. Wars, alliances, frontlines, state control, doctrines, and economies are saved.</p>${simulation ? '<button id="restart-button" class="secondary-button">Restart this continent</button>' : ""}`;
   $("#close-dialog").hidden = false;
   if (!manual.open) manual.showModal();
   $("#restart-button")?.addEventListener("click", () => {
@@ -1026,12 +1090,16 @@ for (const button of document.querySelectorAll<HTMLButtonElement>(
 nationSelect.addEventListener("change", updateDeploy);
 $("#game-menu-button").addEventListener("click",()=>{const menu=$("#game-menu");menu.hidden=!menu.hidden;$("#game-menu-button").setAttribute("aria-expanded",String(!menu.hidden));});
 $("#menu-world").addEventListener("click",()=>{$("#game-menu").hidden=true;returnToOverview();});
+$("#menu-settings").addEventListener("click",()=>{$("#game-menu").hidden=true;const sim=simulation,paused=sim?.paused;if(sim)sim.paused=true;hotkeys.show();$("#settings-dialog").addEventListener("close",()=>{if(sim&&simulation===sim)sim.paused=paused??false;updatePlayUI();},{once:true});updatePlayUI();});
 $("#menu-help").addEventListener("click",()=>{$("#game-menu").hidden=true;showHelp();});
 $("#new-campaign-button").addEventListener("click",()=>{void enterPlay(true);});
 function workspace(name:string){
   if(mode!=="play")return;
   for(const b of document.querySelectorAll<HTMLElement>("[data-workspace]"))b.classList.toggle("active",b.dataset.workspace===name);
-  const management=name==="army"||name==="economy";
+  for(const panel of dockPanels)panel.hidden=true;
+  if(name==="government"){nationPanel.open(simulation!.state.nation);return;}
+  if(name==="economy") {$(".command-panel").classList.add("workspace-hidden");economyPanel.open();return;}
+  const management=name==="army";
   $(".command-panel").classList.toggle("workspace-hidden",!management);
   if(management){closeDiplomacy();closeLeaders();economyPanel.close();$(`#${name}-tab`).click();}
   else if(name==="map"){closeDiplomacy();closeLeaders();economyPanel.close();}
@@ -1075,6 +1143,7 @@ $("#nation-filter").addEventListener("change", renderDiplomacy);
 $("#return-world-button").addEventListener("click", () => $("#world-nav").click());
 $("#play-help-button").addEventListener("click", showHelp);
 for (const button of document.querySelectorAll<HTMLButtonElement>("[data-panel-tab]")) button.addEventListener("click", () => {
+  if(button.dataset.panelTab==="economy"){economyPanel.open();return;}
   for (const tab of document.querySelectorAll<HTMLButtonElement>("[data-panel-tab]")) {
     const active=tab===button; tab.classList.toggle("active",active); tab.setAttribute("aria-selected",String(active));
     $(`#${tab.dataset.panelTab}-controls`).hidden=!active;
@@ -1218,7 +1287,8 @@ function beginPlacement(type:Exclude<Building["type"],"hq">){
   cancelCommand();economyPanel.close();closeDiplomacy();closeLeaders();
   $(".command-panel").classList.remove("mobile-open");placement=type;
   document.querySelector(`[data-build="${type}"]`)?.classList.add("active");canvas.classList.add("placing");
-  $("#build-banner").textContent=type==="mine"?"Place at a coloured mineral deposit in your nation · Esc to cancel":type==="dock"?"Place at an owned coastal site · Esc to cancel":`Place ${type==="factory"?"a factory":"barracks"} on land you control · Esc to cancel`;
+  $("#build-banner").textContent=type==="mine"?"Place at a coloured mineral deposit in your nation · Esc to cancel":type==="dock"?"Place at an owned coastal site · Esc to cancel":`Place ${type==="factory"?"a factory":type==="depot"?"a supply depot":"barracks"} on land you control · Esc to cancel`;
+  const plan=constructionPlans[type];$("#build-banner").textContent+=` · ${plan.days} days · ${Object.entries(plan.materials).map(([id,q])=>`${q} ${commodities[id as keyof typeof commodities].name}`).join(" + ")} / day`;
   $("#build-banner").hidden=false;
 }
 for(const button of document.querySelectorAll<HTMLButtonElement>("[data-build]"))button.addEventListener("click",()=>beginPlacement(button.dataset.build as Exclude<Building["type"],"hq">));
@@ -1232,7 +1302,7 @@ canvas.addEventListener("pointerdown", (event) => {
     event.preventDefault();
     pointerStart=null;
     const point=play.groundPoint(event.clientX,event.clientY);
-    if(point)issueMove(point);
+    if(point)issueMove(point,event.shiftKey);
     return;
   }
   pointerStart = {
@@ -1264,7 +1334,7 @@ canvas.addEventListener("pointermove", (event) => {
         "Waters · " +
         simulation.nationName(simulation.state.seaControl[tile].controller);
     if (placement)
-      play.showGhost(point, !simulation.placementError(placement, ...point));
+      play.showGhost(simulation.placementPoint(placement,...point), !simulation.placementError(placement, ...point));
   }
   const start = pointerStart;
   if (
@@ -1313,8 +1383,8 @@ canvas.addEventListener("pointerup", (event) => {
     else { eventMessage("Infantry assigned to defend the border."); cancelCommand(); }
     updatePlayUI(); return;
   }
-  if (moveMode && point && !moved) {
-    issueMove(point);
+  if ((moveMode||rallyBuilding!==null) && point && !moved) {
+    issueMove(point,event.shiftKey);
     return;
   }
   if (moved && event.pointerType !== "touch")
@@ -1323,9 +1393,15 @@ canvas.addEventListener("pointerup", (event) => {
     const id = play.pickUnit(event.clientX, event.clientY);
     if (!start.shift) play.selected.clear();
     if (id && simulation.playerUnits.some((u) => u.id === id)) {
-      if (start.shift && play.selected.has(id)) play.selected.delete(id);
-      else play.selected.add(id);
+      const members=simulation.visibleStacks().groups.get(id)??simulation.playerUnits.filter(u=>u.id===id);
+      const deselect=start.shift&&members.every(u=>play!.selected.has(u.id));
+      for(const member of members)if(deselect)play.selected.delete(member.id);else play.selected.add(member.id);
     }
+    if(id&&simulation.playerUnits.some(u=>u.id===id))strategyPanel.inspect();
+    const factory=!id?play.pickFactory(event.clientX,event.clientY):null;
+    if(factory!==null){economyPanel.openFactory(factory);updatePlayUI();return;}
+    const building=!id?play.pickBuilding(event.clientX,event.clientY):null;
+    if(building!==null){strategyPanel.inspectBuilding(building);updatePlayUI();return;}
     if (!id && point) {
       const country = play.countryAt(point);
       if (country && country.id !== simulation.state.nation) {
@@ -1343,7 +1419,7 @@ canvas.addEventListener("pointercancel", () => {
 });
 window.addEventListener("keydown", (event) => {
   if (
-    manual.open ||
+    document.querySelector("dialog[open]") ||
     event.target instanceof HTMLInputElement ||
     event.target instanceof HTMLSelectElement ||
     event.target instanceof HTMLTextAreaElement
@@ -1357,21 +1433,24 @@ window.addEventListener("keydown", (event) => {
   )
     event.preventDefault();
   if (event.repeat) return;
-  if (event.code === "KeyQ")
-    simulation.playerUnits.forEach((u) => play!.selected.add(u.id));
-  if (event.code === "KeyX") simulation.stop([...play.selected]);
-  if (event.code === "KeyF") play.focusBase();
+  if(/^Digit[1-9]$/.test(event.code)){
+    event.preventDefault();const group=event.code.slice(-1);
+    if(event.ctrlKey||event.metaKey){simulation.state.controlGroups![group]=[...play.selected];saveCampaign(simulation.state);toast(`Group ${group} saved.`);}
+    else {play.selected.clear();const alive=new Set(simulation.playerUnits.map(u=>u.id));for(const id of simulation.state.controlGroups![group]??[])if(alive.has(id))play.selected.add(id);strategyPanel.inspect();}updatePlayUI();return;
+  }
+  if(event.ctrlKey||event.metaKey)return;
+  if(hotkeys.handle(event)){updatePlayUI();return;}
   if (event.code === "Escape") {
+    const openContext=[technologyPanel.element,strategyPanel.element,nationPanel.element,$(".affairs-panel")].find(p=>!p.hidden);if(openContext){openContext.hidden=true;return;}
     if (economyPanel.visible) {economyPanel.close();return;}
     if (!$("#diplomacy-panel").hidden) {
       closeDiplomacy();
       $<HTMLButtonElement>("#diplomacy-button").focus();
     } else if (!$("#leaders-panel").hidden) {
       closeLeaders(); $("#leaders-button").focus();
-    } else if (placement || moveMode || frontlineMode) cancelCommand();
+    } else if (placement || moveMode || frontlineMode || rallyBuilding!==null) cancelCommand();
     else play.selected.clear();
   }
-  if (event.code === "Space") simulation.paused = !simulation.paused;
   updatePlayUI();
 });
 window.addEventListener("resize", resize);
@@ -1433,7 +1512,9 @@ async function boot() {
           runtimeTimings:{...runtimeTimings},
           calendar:simulation?calendar(simulation.state.elapsed,simulation.state.tickPhase):null,
           renderTimings:play?{...play.performanceStats}:null,
+          modelAssets:play?{...play.assetStats}:null,
           visibleCityNames:play?.visibleCityNames??[],
+          visibleNationLabels:play?.visibleNationLabels??[],
           modelStats: play ? {...play.modelStats} : null,
           modelScales:play?{unit:[...play.units.values()][0]?.group.scale.x,building:[...play.buildings.values()][0]?.scale.x}:null,
           pathQueue: paths?.queued ?? 0,
